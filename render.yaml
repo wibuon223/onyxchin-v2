@@ -1,0 +1,47 @@
+# Render blueprint (reference). The programmatic equivalent lives in tools/deploy-render.mjs
+services:
+  - type: web
+    name: onyxchin-api
+    runtime: node
+    plan: free
+    region: singapore
+    branch: main
+    autoDeploy: true
+    buildCommand: npm ci --include=dev && npm run build:shared && npm run build:api
+    startCommand: npm run start:api
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NODE_ENV
+        value: production
+
+  - type: web
+    name: onyxchin-web
+    runtime: static
+    branch: main
+    autoDeploy: true
+    buildCommand: npm ci --include=dev && npm run build:shared && npm run build:web
+    staticPublishPath: apps/web/dist
+    envVars:
+      - key: VITE_API_BASE
+        value: https://onyxchin-api.onrender.com
+    routes:
+      - type: rewrite
+        source: /:path*
+        destination: /index.html
+
+  - type: web
+    name: onyxchin-docs
+    runtime: static
+    branch: main
+    autoDeploy: true
+    buildCommand: npm ci --include=dev && npm run build:shared && npm run build:docs
+    staticPublishPath: apps/docs/dist
+    envVars:
+      - key: VITE_API_BASE
+        value: https://onyxchin-api.onrender.com
+    routes:
+      - type: rewrite
+        source: /:path*
+        destination: /index.html

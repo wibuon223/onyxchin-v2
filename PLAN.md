@@ -71,6 +71,7 @@ onyxchin/
 | `GET /api/img?url=` | proxy poster (anti-hotlink) |
 | `GET /api/media?u=&ref=` | proxy MP4 dengan **Range** (seek) |
 | `GET /api/hls?u=` | rewrite playlist m3u8 |
+| `GET /api/sub?u=` | proxy subtitle + auto SRT→WebVTT |
 
 `VideoSource.kind`: `direct` (mp4) · `hls` (m3u8) · `iframe` (embed) · `external` (buka tab baru).
 `playable` = benar-benar bisa diputar browser kita. UI memisahkan yang playable vs yang tidak (dengan alasan).

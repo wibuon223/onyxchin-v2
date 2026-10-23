@@ -2,14 +2,20 @@
   "name": "onyxchin",
   "private": true,
   "version": "1.0.0",
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev:api": "npm --workspace @onyxchin/api run dev",
     "build:api": "npm --workspace @onyxchin/api run build",
     "start:api": "npm --workspace @onyxchin/api run start",
     "build:web": "npm --workspace @onyxchin/web run build",
     "build:docs": "npm --workspace @onyxchin/docs run build",
-    "build": "npm run build:api && npm run build:web && npm run build:docs"
+    "build": "npm run build:shared && npm run build:api && npm run build:web && npm run build:docs",
+    "build:shared": "npm --workspace @onyxchin/shared run build"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  }
 }

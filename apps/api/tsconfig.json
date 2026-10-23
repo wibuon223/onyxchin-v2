@@ -4,10 +4,20 @@
     "outDir": "dist",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "lib": ["ES2022", "DOM"],
-    "types": ["node"],
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
+    "types": [
+      "node"
+    ],
     "noEmitOnError": false,
-    "declaration": false
+    "declaration": false,
+    "rootDir": "src",
+    "baseUrl": ".",
+    "paths": {}
   },
-  "include": ["src/**/*.ts"]
+  "include": [
+    "src/**/*.ts"
+  ]
 }

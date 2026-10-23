@@ -67,16 +67,66 @@ export async function proxyMedia(c: Context) {
       headers: range ? { range } : {},
     });
     const headers = new Headers();
-    for (const h of ["content-type", "content-length", "content-range", "accept-ranges", "etag", "last-modified"]) {
+    const upstreamType = res.headers.get("content-type") ?? "";
+    for (const h of ["content-length", "content-range", "accept-ranges", "etag", "last-modified"]) {
       const v = res.headers.get(h);
       if (v) headers.set(h, v);
     }
+    headers.set("content-type", mediaType(decoded, upstreamType));
     headers.set("access-control-allow-origin", "*");
     headers.set("cache-control", "public, max-age=3600");
     return new Response(res.body, { status: res.status, headers });
   } catch {
     return c.json({ error: "upstream failed" }, 502);
   }
+}
+
+function mediaType(url: string, upstream: string): string {
+  const generic = !upstream || /^(text\/plain|application\/octet-stream|binary\/octet-stream)/i.test(upstream);
+  if (!generic) return upstream;
+  const path = url.split("?")[0].toLowerCase();
+  if (path.endsWith(".mp4") || path.endsWith(".m4v")) return "video/mp4";
+  if (path.endsWith(".webm")) return "video/webm";
+  if (path.endsWith(".ts")) return "video/mp2t";
+  if (path.endsWith(".m3u8")) return "application/vnd.apple.mpegurl";
+  if (path.endsWith(".vtt")) return "text/vtt; charset=utf-8";
+  if (path.endsWith(".srt")) return "text/plain; charset=utf-8";
+  if (/\.(jpg|jpeg)$/.test(path)) return "image/jpeg";
+  if (path.endsWith(".png")) return "image/png";
+  if (path.endsWith(".webp")) return "image/webp";
+  return "application/octet-stream";
+}
+
+/**
+ * Subtitle proxy: SRT is not playable in <track>, so convert to WebVTT on the fly.
+ * Upstream subs are usually UTF-8; strip BOM and normalize CRLF.
+ */
+export async function proxySubtitle(c: Context) {
+  const target = c.req.query("u");
+  if (!target) return c.json({ error: "missing u" }, 400);
+  const decoded = decodeURIComponent(target);
+  if (!hostAllowed(decoded)) return c.json({ error: "host not allowed" }, 403);
+  try {
+    const res = await fetchRaw(decoded, { referer: new URL(decoded).origin + "/", timeoutMs: 20000 });
+    const raw = (await res.text()).replace(/^\uFEFF/, "").replace(/\r\n/g, "\n");
+    return new Response(toVtt(raw), {
+      headers: {
+        "content-type": "text/vtt; charset=utf-8",
+        "access-control-allow-origin": "*",
+        "cache-control": "public, max-age=86400",
+      },
+    });
+  } catch {
+    return c.json({ error: "upstream failed" }, 502);
+  }
+}
+
+export function toVtt(raw: string): string {
+  if (/^WEBVTT/.test(raw)) return raw;
+  const body = raw
+    .replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, "$1.$2")
+    .replace(/^\s*\d+\s*\n(?=\d{2}:\d{2}:\d{2})/gm, "");
+  return "WEBVTT\n\n" + body.trim() + "\n";
 }
 
 /** HLS proxy: rewrites every URI in a playlist through /api/hls/seg. */
