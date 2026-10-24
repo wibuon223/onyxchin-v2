@@ -92,6 +92,18 @@ export async function fetchDocDetailed(
       }
     }
   }
+  // Hosts that our own relay can reach go through it first: Bright Data stalls
+  // from Render's egress for these very sites, and the relay answers in ~2-7s.
+  if (relayAllowed(url) && !forceRelay) {
+    try {
+      const res = await fetchViaRelay(url, opts);
+      mark("relay");
+      return done(res, "relay");
+    } catch (err) {
+      mark("relay", err);
+      lastError = err;
+    }
+  }
   if (hasProxy() && !proxyDisabled() && shouldProxy(url, lastError)) {
     // Rotating residential exits occasionally hang; one retry lands on a fresh
     // exit and usually succeeds.
