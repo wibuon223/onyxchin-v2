@@ -1,0 +1,48 @@
+name: deploy
+
+# Render's GitHub App isn't installed on this repo, so pushes don't auto-deploy.
+# This workflow triggers the three services through Render's REST API instead.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Trigger API deploy
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          curl -fsS -X POST \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "content-type: application/json" \
+            -d '{"clearCache":"do_not_clear"}' \
+            https://api.render.com/v1/services/srv-dbdv7vfb9u1s73bl0hvg/deploys >/dev/null
+      - name: Trigger web deploy
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          curl -fsS -X POST \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "content-type: application/json" \
+            -d '{"clearCache":"do_not_clear"}' \
+            https://api.render.com/v1/services/srv-dbdv7vvb9u1s73bl0jhg/deploys >/dev/null
+      - name: Trigger docs deploy
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          curl -fsS -X POST \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "content-type: application/json" \
+            -d '{"clearCache":"do_not_clear"}' \
+            https://api.render.com/v1/services/srv-dbdv80fb9u1s73bl0lh0/deploys >/dev/null
+      - name: Summary
+        run: echo "Triggered api + web + docs deploys on Render."

@@ -91,6 +91,11 @@ export function Watch() {
     [watch.data],
   );
 
+  const downloads = useMemo(
+    () => (resolvedSources ?? []).filter((item) => item.kind === "direct" && item.playable),
+    [resolvedSources],
+  );
+
   const resolvedSubtitles = useMemo(
     () =>
       (watch.data?.subtitles ?? []).map((track) => ({
@@ -323,6 +328,25 @@ export function Watch() {
                 )
                 .join("  ·  ")}
             </p>
+          ) : null}
+          {downloads.length ? (
+            <div className="servers__downloads">
+              <span className="mono mono--faint">Unduh</span>
+              {downloads.map((item) => {
+                const fileName = `${slug}-ep${episode?.number ?? ""}-${item.quality ?? "video"}.mp4`;
+                return (
+                  <a
+                    key={`dl-${item.id}`}
+                    className="server__dl mono"
+                    href={`${item.url}&dl=1&name=${encodeURIComponent(fileName)}`}
+                    download={fileName}
+                  >
+                    {item.quality ?? "MP4"}
+                    <Icon name="arrowRight" size={11} />
+                  </a>
+                );
+              })}
+            </div>
           ) : null}
         </div>
 
