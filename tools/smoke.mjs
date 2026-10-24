@@ -5,7 +5,7 @@
  * Default base: http://127.0.0.1:8891
  */
 const BASE = process.argv[2] ?? process.env.ONYX_API ?? "http://127.0.0.1:8891";
-const SOURCES = ["rajadonghua", "anichin", "animexin", "yunshanid", "donghuaworld"];
+const SOURCES = ["rajadonghua", "anichin", "animexin", "donghuaworld"];
 
 async function j(path) {
   const t0 = performance.now();

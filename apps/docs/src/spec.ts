@@ -12,7 +12,7 @@ export const API_VERSION = "v1";
 /* Sources                                                             */
 /* ------------------------------------------------------------------ */
 
-export type SourceId = "rajadonghua" | "anichin" | "animexin" | "yunshanid" | "donghuaworld";
+export type SourceId = "rajadonghua" | "anichin" | "animexin" | "donghuaworld";
 
 export interface SourceInfo {
   id: SourceId;
@@ -25,7 +25,6 @@ export const SOURCES: SourceInfo[] = [
   { id: "rajadonghua", name: "Raja Donghua", baseUrl: "https://rajadonghua.com", lang: "id" },
   { id: "anichin", name: "Anichin", baseUrl: "https://anichin.my", lang: "id" },
   { id: "animexin", name: "AnimeXin", baseUrl: "https://animexin.dev", lang: "id" },
-  { id: "yunshanid", name: "YunshanID", baseUrl: "https://yunshanid.site", lang: "id" },
   { id: "donghuaworld", name: "Donghua World", baseUrl: "https://donghuaworld.com", lang: "id" },
 ];
 
@@ -60,13 +59,6 @@ export const SOURCE_MATRIX: SourceMatrixRow[] = [
     catalog: "8 mirrors",
     playback: "gdriveplayer embeds",
     extras: "Multi-language embeds; iframe/external only",
-  },
-  {
-    id: "yunshanid",
-    name: "YunshanID",
-    catalog: "Google Drive library",
-    playback: "Drive preview iframes",
-    extras: "Playback stays inside Google Drive",
   },
   {
     id: "donghuaworld",

@@ -5,7 +5,6 @@ const ALLOW = [
   "rajadonghua.com",
   "anichin.my",
   "animexin.dev",
-  "yunshanid.site",
   "donghuaworld.com",
   "donghuaworld.in",
   "wsrv.nl",
@@ -98,10 +97,11 @@ export async function proxyMedia(c: Context) {
   try {
     const res = await fetchUpstream(decoded, { referer, range, timeoutMs: 40000 });
     const upstreamType = res.headers.get("content-type") ?? "";
+    const length = Number(res.headers.get("content-length") ?? 0);
     // HLS masters point at variant playlists, not segments. The browser reaches
     // those through /api/hls/seg, so this endpoint must rewrite nested playlists
     // too — otherwise relative segment paths resolve against our own origin.
-    if (isPlaylist(decoded, upstreamType)) {
+    if (isPlaylist(decoded, upstreamType, length, range)) {
       const text = await res.text();
       return new Response(rewritePlaylist(text, new URL(decoded), referer), {
         headers: {
@@ -125,9 +125,19 @@ export async function proxyMedia(c: Context) {
   }
 }
 
-function isPlaylist(url: string, contentType: string): boolean {
+/**
+ * Dailymotion serves variants from URLs like `…/x.m3u8#cell=cf3` and often with
+ * a generic content-type, so hash/query stripping plus a size check are both
+ * required — a missed match here makes hls.js resolve `0.m4s` against our host.
+ */
+function isPlaylist(url: string, contentType: string, length: number, range?: string): boolean {
   if (/mpegurl/i.test(contentType)) return true;
-  return url.split("?")[0].toLowerCase().endsWith(".m3u8");
+  const clean = url.split("#")[0].split("?")[0].toLowerCase();
+  if (clean.endsWith(".m3u8")) return true;
+  if (clean.endsWith(".m4s") || clean.endsWith(".ts") || clean.endsWith(".mp4")) return false;
+  if (range) return false;
+  const generic = !contentType || /text\/plain|octet-stream|application\/vnd\.apple/i.test(contentType);
+  return generic && (length === 0 || length < 900_000);
 }
 
 /** Rewrite every URI in a playlist so the browser only ever talks to us. */
@@ -152,6 +162,7 @@ function mediaType(url: string, upstream: string): string {
   if (path.endsWith(".mp4") || path.endsWith(".m4v")) return "video/mp4";
   if (path.endsWith(".webm")) return "video/webm";
   if (path.endsWith(".ts")) return "video/mp2t";
+  if (path.endsWith(".m4s") || path.endsWith(".cmfv")) return "video/iso.segment";
   if (path.endsWith(".m3u8")) return "application/vnd.apple.mpegurl";
   if (path.endsWith(".vtt")) return "text/vtt; charset=utf-8";
   if (path.endsWith(".srt")) return "text/plain; charset=utf-8";
@@ -218,7 +229,8 @@ export async function proxyHls(c: Context) {
 }
 
 function segUrl(base: URL, raw: string, referer?: string): string {
-  const abs = new URL(raw, base).toString();
+  const resolved = new URL(raw, base);
+  resolved.hash = ""; // Dailymotion tags variants with "#cell=…"; keep it out of u=
   const ref = referer ? `&ref=${encodeURIComponent(referer)}` : "";
-  return `/api/hls/seg?u=${encodeURIComponent(abs)}${ref}`;
+  return `/api/hls/seg?u=${encodeURIComponent(resolved.toString())}${ref}`;
 }

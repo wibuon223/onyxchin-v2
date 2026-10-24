@@ -18,7 +18,6 @@ export const FALLBACK_SOURCES: SourceInfo[] = [
   { id: "rajadonghua", name: "Raja Donghua", baseUrl: "https://rajadonghua.com", lang: "id" },
   { id: "anichin", name: "Anichin", baseUrl: "https://anichin.my", lang: "id" },
   { id: "animexin", name: "AnimeXin", baseUrl: "https://animexin.dev", lang: "id" },
-  { id: "yunshanid", name: "YunshanID", baseUrl: "https://yunshanid.site", lang: "id" },
   { id: "donghuaworld", name: "Donghua World", baseUrl: "https://donghuaworld.com", lang: "id" },
 ];
 

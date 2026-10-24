@@ -141,7 +141,7 @@ function sleep(ms: number): Promise<void> {
  * know nothing else can reach.
  */
 function relayAllowed(url: string): boolean {
-  const hosts = (process.env.ONYX_RELAY_HOSTS ?? "animexin.dev,yunshanid.site,donghuaworld.com")
+  const hosts = (process.env.ONYX_RELAY_HOSTS ?? "animexin.dev,donghuaworld.com")
     .split(",")
     .map((h) => h.trim().toLowerCase())
     .filter(Boolean);
@@ -164,7 +164,7 @@ let proxyCooldownUntil = 0;
  * bandwidth (or 20s of latency) — only 403/429/503 earns the proxy there.
  */
 function shouldProxy(url: string, err: unknown): boolean {
-  const hosts = (process.env.ONYX_PROXY_HOSTS ?? "animexin.dev,yunshanid.site,donghuaworld.com")
+  const hosts = (process.env.ONYX_PROXY_HOSTS ?? "animexin.dev,donghuaworld.com")
     .split(",")
     .map((h) => h.trim().toLowerCase())
     .filter(Boolean);

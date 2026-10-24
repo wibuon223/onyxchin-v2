@@ -24,7 +24,7 @@ app.get("/api/health", (c) =>
 );
 
 
-const DIAG_HOSTS = ["yunshanid.site", "donghuaworld.com", "animexin.dev", "anichin.my", "rajadonghua.com"];
+const DIAG_HOSTS = ["donghuaworld.com", "animexin.dev", "anichin.my", "rajadonghua.com"];
 
 app.get("/api/diag", async (c) => {
   const target = c.req.query("u");

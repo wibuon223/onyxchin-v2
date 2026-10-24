@@ -23,7 +23,7 @@ TOKEN = os.environ.get("DM_RELAY_TOKEN", "")
 PORT = int(os.environ.get("PORT", "10000"))
 TIMEOUT = 40
 ALLOW = re.compile(
-    r"(^|\.)(dailymotion\.com|dmcdn\.net|dm-event\.net|animexin\.dev|yunshanid\.site|donghuaworld\.com|donghuaworld\.in|anichin\.my|rajadonghua\.com)$",
+    r"(^|\.)(dailymotion\.com|dmcdn\.net|dm-event\.net|animexin\.dev|donghuaworld\.com|donghuaworld\.in|anichin\.my|rajadonghua\.com)$",
     re.I,
 )
 UA = (

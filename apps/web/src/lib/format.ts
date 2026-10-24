@@ -46,7 +46,6 @@ const SHORT_SOURCE_NAMES: Record<string, string> = {
   rajadonghua: "Raja",
   anichin: "Anichin",
   animexin: "AnimeXin",
-  yunshanid: "Yunshan",
   donghuaworld: "DHW",
 };
 

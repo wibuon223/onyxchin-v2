@@ -1,6 +1,6 @@
 /** Shared contract for every OnyxChin source adapter. */
 
-export type SourceId = "rajadonghua" | "anichin" | "animexin" | "yunshanid" | "donghuaworld";
+export type SourceId = "rajadonghua" | "anichin" | "animexin" | "donghuaworld";
 
 export interface Card {
   id: string;
