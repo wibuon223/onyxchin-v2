@@ -113,7 +113,7 @@ export async function fetchDocDetailed(
     return done(res, "relay");
   } catch (err) {
     mark("relay", err);
-    throw err;
+    throw Object.assign(err instanceof Error ? err : new Error(String(err)), { attempts });
   }
 }
 
