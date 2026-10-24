@@ -412,8 +412,10 @@ async function home(): Promise<HomePayload> {
     () => fetchCards({ limit: HOME_HERO_LIMIT, page: 1, sort: "popular" }),
     () => fetchCards({ limit: HOME_SECTION_LIMIT, page: 1, sort: "popular" }),
     () => fetchCards({ limit: HOME_SECTION_LIMIT, page: 1, sort: "latest" }),
+    // sort=rating keeps genre rows distinct from Terbaru/Populer; with sort=popular
+    // the upstream returns the same top titles for every genre.
     ...HOME_GENRES.map((genre) => () =>
-      fetchCards({ limit: HOME_SECTION_LIMIT, page: 1, sort: "popular", genre }),
+      fetchCards({ limit: HOME_SECTION_LIMIT, page: 1, sort: "rating", genre }),
     ),
   ]);
 
