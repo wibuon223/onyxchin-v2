@@ -11,7 +11,15 @@ import { EmptyState, ErrorCard } from "../components/State";
 const ORDER_OPTIONS: { value: string; label: string }[] = [
   { value: "latest", label: "Terbaru" },
   { value: "popular", label: "Populer" },
+  { value: "rating", label: "Rating" },
 ];
+
+const STATUS_LABELS: Record<string, string> = {
+  ongoing: "Sedang Tayang",
+  completed: "Selesai",
+  upcoming: "Akan Datang",
+  hiatus: "Hiatus",
+};
 
 /**
  * Genre vocabulary every adapter understands (display names, matched by the
@@ -36,7 +44,9 @@ export function Browse() {
   const { source, sourceInfo } = useSources();
   const [params, setParams] = useSearchParams();
   const genre = params.get("genre") ?? "";
-  const order = params.get("order") === "popular" ? "popular" : "latest";
+  const rawOrder = params.get("order") ?? "";
+  const order = ["popular", "rating"].includes(rawOrder) ? rawOrder : "latest";
+  const status = params.get("status") ?? "";
 
   const [items, setItems] = useState<Card[]>([]);
   const [genres, setGenres] = useState<string[]>([]);
@@ -73,7 +83,7 @@ export function Browse() {
       try {
         const payload = await getList(
           source,
-          { page, genre: genre || undefined, order },
+          { page, genre: genre || undefined, order, status: status || undefined },
           controller.signal,
         );
         if (id !== requestId.current) return;
@@ -97,7 +107,7 @@ export function Browse() {
         }
       }
     },
-    [source, genre, order],
+    [source, genre, order, status],
   );
 
   useEffect(() => {
@@ -107,13 +117,15 @@ export function Browse() {
     return () => controllerRef.current?.abort();
   }, [load]);
 
-  const updateParams = (next: { genre?: string; order?: string }) => {
-    const merged = { genre, order, ...next };
+  const updateParams = (next: { genre?: string; order?: string; status?: string }) => {
+    const merged = { genre, order, status, ...next };
     const query = new URLSearchParams(params);
     if (merged.genre) query.set("genre", merged.genre);
     else query.delete("genre");
     if (merged.order && merged.order !== "latest") query.set("order", merged.order);
     else query.delete("order");
+    if (merged.status) query.set("status", merged.status);
+    else query.delete("status");
     setParams(query, { replace: true });
   };
 
@@ -159,6 +171,16 @@ export function Browse() {
               </button>
             ))}
           </div>
+          {status ? (
+            <button
+              type="button"
+              className="chip chip--active"
+              onClick={() => updateParams({ status: "" })}
+              title="Hapus filter status"
+            >
+              Status: {STATUS_LABELS[status] ?? status} ✕
+            </button>
+          ) : null}
           <label className="filters__sort">
             <span className="mono mono--faint">Urut</span>
             <select

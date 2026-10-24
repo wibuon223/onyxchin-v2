@@ -408,6 +408,14 @@ function sectionCards($: CheerioAPI, needle: string): Card[] {
   return best.slice(0, 24);
 }
 
+
+function browseHref(title: string): string {
+  if (title === "Sedang Tayang") return "/browse?status=ongoing";
+  if (title === "Selesai") return "/browse?status=completed";
+  if (title.includes("Populer")) return "/browse?order=popular";
+  return "/browse";
+}
+
 export const donghuaworld: SourceAdapter = {
   id: "donghuaworld",
   name: "Donghua World",
@@ -441,7 +449,7 @@ export const donghuaworld: SourceAdapter = {
       ["All-Time Populer", allTime],
       ["Sedang Tayang", statusRow(ongoing)],
       ["Selesai", statusRow(completed)],
-    ]);
+    ]).map((section) => ({ ...section, href: browseHref(section.title) }));
 
     return { hero, sections };
   },

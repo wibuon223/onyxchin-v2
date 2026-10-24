@@ -297,6 +297,15 @@ function sectionCards($: cheerio.CheerioAPI, needle: string, tag: string): Card[
   return best.slice(0, 20);
 }
 
+
+function browseHref(title: string): string {
+  if (title === "Terpopuler Hari Ini") return "/browse?order=popular";
+  if (["Action", "Fantasy", "Adventure", "Martial Arts"].includes(title)) {
+    return `/browse?genre=${encodeURIComponent(title)}`;
+  }
+  return "/browse";
+}
+
 export const anichin: SourceAdapter = {
   id: "anichin",
   name: "Anichin",
@@ -340,10 +349,7 @@ export const anichin: SourceAdapter = {
     ];
     const sections = distinctRows(rows).map((section) => ({
       ...section,
-      href:
-        section.title === "Terbaru"
-          ? "/api/anichin/list?page=1"
-          : `/api/anichin/list?page=1&genre=${encodeURIComponent(section.title)}`,
+      href: browseHref(section.title),
     }));
 
     const hero = latest.slice(0, 6);

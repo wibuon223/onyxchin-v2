@@ -407,6 +407,15 @@ function cardsOf(result: PromiseSettledResult<Card[]>): Card[] {
   return result.status === "fulfilled" ? result.value : [];
 }
 
+
+/** Web-facing "view all" target for a home row. */
+function browseHref(title: string): string {
+  if (title === "Terbaru") return "/browse";
+  if (title === "Populer") return "/browse?order=popular";
+  if (title === "Rating Tertinggi") return "/browse?order=rating";
+  return `/browse?genre=${encodeURIComponent(title)}`;
+}
+
 async function home(): Promise<HomePayload> {
   const [heroResult, trendingResult, latestResult, ratingResult, ...genreResults] = await settleInWaves<Card[]>([
     () => fetchCards({ limit: HOME_HERO_LIMIT, page: 1, sort: "popular" }),
@@ -433,7 +442,7 @@ async function home(): Promise<HomePayload> {
   ];
   const sections = distinctRows(rows).map((section) => ({
     ...section,
-    href: section.title === "Terbaru" ? "/api/rajadonghua/list?page=1" : `/api/rajadonghua/list?page=1&genre=${encodeURIComponent(section.title)}`,
+    href: browseHref(section.title),
   }));
 
   return { hero, sections };

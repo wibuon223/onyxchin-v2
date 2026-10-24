@@ -522,6 +522,11 @@ async function fetchSeriesPage(url: string): Promise<{ items: Card[]; hasNext: b
   return { items: cardList($, ".listupd article.bs"), hasNext: $(".hpage a.r").length > 0 };
 }
 
+
+function browseHref(title: string): string {
+  return title === "Terbaru" || title === "Baru Rilis" ? "/browse" : "/browse?order=popular";
+}
+
 export const animexin: SourceAdapter = {
   id: "animexin",
   name: "AnimeXin",
@@ -549,7 +554,7 @@ export const animexin: SourceAdapter = {
       ["Baru Rilis", latestRelease],
       ["Populer Mingguan", weekly],
       ["Populer Sepanjang Waktu", allTime],
-    ]);
+    ]).map((section) => ({ ...section, href: browseHref(section.title) }));
 
     return { hero, sections };
   },

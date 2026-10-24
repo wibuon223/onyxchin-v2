@@ -245,7 +245,7 @@ export function Home() {
               <SectionHead
                 index={index + (continueItems.length > 0 ? 2 : 1)}
                 title={section.title}
-                href="/browse"
+                href={section.href ?? "/browse"}
                 hrefLabel="Jelajah"
               />
               {section.items.length > 0 ? (
