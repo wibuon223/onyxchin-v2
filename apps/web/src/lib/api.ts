@@ -107,7 +107,7 @@ export function errorMessage(error: unknown): string {
 
 const CACHE_LIMIT = 120;
 const DEFAULT_TIMEOUT = 30_000;
-const STORE_PREFIX = "onyxchin:api:";
+const STORE_PREFIX = "onyxchin:api:v2:";
 const STORE_MAX_ENTRIES = 40;
 const STORE_MAX_BYTES = 180_000;
 const STORE_HARD_TTL = 24 * 60 * 60_000;
