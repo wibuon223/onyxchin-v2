@@ -1,0 +1,37 @@
+{
+  "name": "OnyxChin — Donghua Streaming",
+  "short_name": "OnyxChin",
+  "description": "Streaming donghua multi-sumber: Raja Donghua, Anichin, AnimeXin, Donghua World.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#07080A",
+  "theme_color": "#07080A",
+  "orientation": "any",
+  "lang": "id",
+  "categories": ["entertainment", "video"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    { "name": "Jelajah", "url": "/browse" },
+    { "name": "Cari", "url": "/search" }
+  ]
+}
