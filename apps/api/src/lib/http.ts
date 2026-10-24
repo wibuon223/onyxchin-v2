@@ -59,6 +59,16 @@ export async function fetchDocDetailed(
       lastError = err;
       if (!isBlocked(err) || opts.method === "POST") throw err;
     }
+    // Rate limits on a direct-friendly host are usually transient: one short
+    // retry beats paying for a proxy round-trip.
+    if (!shouldProxy(url, lastError) && lastError instanceof HttpError && [429, 503].includes(lastError.status)) {
+      await sleep(450);
+      try {
+        return done(await fetchRaw(url, opts), "direct");
+      } catch (err) {
+        lastError = err;
+      }
+    }
   }
   if (hasProxy() && !proxyDisabled() && shouldProxy(url, lastError)) {
     try {
@@ -67,7 +77,33 @@ export async function fetchDocDetailed(
       markProxyFailure();
     }
   }
+  if (!relayAllowed(url) && !forceRelay) {
+    throw lastError ?? new Error(`upstream blocked: ${url}`);
+  }
   return done(await fetchViaRelay(url, opts), "relay");
+}
+
+function sleep(ms: number): Promise<void> {
+  const { promise, resolve } = Promise.withResolvers<void>();
+  setTimeout(resolve, ms);
+  return promise;
+}
+
+/**
+ * Free relays are a last resort and rate limited; only spend them on hosts we
+ * know nothing else can reach.
+ */
+function relayAllowed(url: string): boolean {
+  const hosts = (process.env.ONYX_RELAY_HOSTS ?? "animexin.dev,yunshanid.site,donghuaworld.com")
+    .split(",")
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean);
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return hosts.some((h) => host === h || host.endsWith("." + h));
+  } catch {
+    return false;
+  }
 }
 
 let proxyAgent: ProxyAgent | null = null;
