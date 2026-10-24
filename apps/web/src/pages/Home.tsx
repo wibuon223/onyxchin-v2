@@ -291,6 +291,9 @@ export function Home() {
         <div className="home__end container">
           <p className="mono mono--faint">
             {sections.length + (continueItems.length > 0 ? 1 : 0)} daftar · {sourceName}
+            {sections.length < 3
+              ? " · sumber ini mengabaikan filter upstream, daftarnya terbatas"
+              : ""}
           </p>
           <Link className="btn btn--ghost btn--sm" to="/browse">
             Telusuri seluruh katalog

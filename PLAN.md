@@ -45,6 +45,20 @@ Env terkait: `ONYX_PROXY_URL`, `ONYX_PROXY_HOSTS`, `ONYX_RELAY_BASE`, `ONYX_RELA
 > Render pitfall: `PUT /v1/services/:id/env-vars` **mengganti seluruh daftar**, bukan merge. Kirim semua key setiap kali.
 Rate limit 429 di host direct di-retry sekali (450ms) sebelum menyerah — bukan langsung lempar ke proxy.
 
+
+## Home sections (status akhir, 24 Okt 2026)
+
+YunshanID dibuang (banyak judul cuma punya 1 mirror). Sisa **4 sumber**, section home dinormalisasi + baris duplikat otomatis dibuang (`apps/api/src/lib/home.ts`):
+
+| Sumber | Section | Catatan |
+|---|---|---|
+| Raja Donghua | **6** — Terbaru, Populer, Action, Fantasy, Adventure, Martial Arts | genre pakai `sort=rating` supaya tidak sama dengan Populer |
+| Anichin | **6** — sama | genre page `/genres/<slug>/` benar-benar memfilter |
+| Donghua World | **6** — Terbaru, Populer Minggu Ini, All-Time, Rekomendasi, Sedang Tayang, Selesai | status filter terbukti beda |
+| AnimeXin | **1** — Terbaru | upstream mengabaikan `page`, `order`, `status`, `genre[]` (semua query balik daftar sama) |
+
+AnimeXin tetap dipertahankan karena halaman watch-nya punya 8 mirror/episode; home-nya diberi keterangan "sumber ini mengabaikan filter upstream".
+
 ---
 
 ## 1. Recon — hasil probe live (24 Okt 2026)
