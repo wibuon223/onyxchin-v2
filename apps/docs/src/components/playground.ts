@@ -228,7 +228,16 @@ export function createPlayground(ep: EndpointSpec): HTMLElement {
     }, REQUEST_TIMEOUT_MS);
 
     try {
-      const res = await fetch(url, { signal: controller.signal, headers: { accept: "*/*" } });
+      const init: RequestInit =
+        ep.method === "PUT"
+          ? {
+              method: "PUT",
+              headers: { accept: "*/*", "content-type": "application/json" },
+              body: JSON.stringify({ entries: [] }),
+              signal: controller.signal,
+            }
+          : { signal: controller.signal, headers: { accept: "*/*" } };
+      const res = await fetch(url, init);
       await renderResponse(res, Math.round(performance.now() - started));
     } catch (error) {
       const ms = Math.round(performance.now() - started);

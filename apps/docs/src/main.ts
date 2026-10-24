@@ -22,9 +22,10 @@ const GROUP_BLURB: Record<GroupId, string> = {
   discovery: "Service metadata and the adapter registry.",
   catalog: "Normalized reads across all five sources.",
   proxy: "Same-origin transport for images, media, playlists and subtitles.",
+  sync: "Optional cross-device watch history, keyed by a user code.",
 };
 
-const GROUP_ORDER: GroupId[] = ["discovery", "catalog", "proxy"];
+const GROUP_ORDER: GroupId[] = ["discovery", "catalog", "proxy", "sync"];
 
 function groupHeader(id: GroupId): HTMLElement {
   return h(

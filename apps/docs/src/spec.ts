@@ -98,12 +98,13 @@ export type ResponseSpec =
       summary?: string;
     };
 
-export type GroupId = "discovery" | "catalog" | "proxy";
+export type GroupId = "discovery" | "catalog" | "proxy" | "sync";
 
 export const GROUP_LABEL: Record<GroupId, string> = {
   discovery: "Discovery",
   catalog: "Catalog",
   proxy: "Proxies",
+  sync: "Watch sync",
 };
 
 export interface ErrorCase {
@@ -116,7 +117,7 @@ export interface EndpointSpec {
   id: string;
   group: GroupId;
   title: string;
-  method: "GET";
+  method: "GET" | "PUT";
   path: string;
   summary: string;
   description: string;
@@ -357,6 +358,76 @@ export const ENDPOINTS: EndpointSpec[] = [
         })),
       },
     },
+  },
+  {
+    id: "sync-read",
+    group: "sync",
+    title: "Read watch sync",
+    method: "GET",
+    path: "/api/sync/:code",
+    summary: "Fetch the merged watch history for a device code.",
+    description:
+      "Returns the entries stored under a user-chosen code. Codes are 6–24 lowercase letters or digits; separators such as `-` are ignored. No account is involved — the code is the whole identity.",
+    params: [
+      {
+        name: "code",
+        in: "path",
+        required: true,
+        type: "string",
+        desc: "Device code, 6–24 lowercase letters or digits.",
+        example: "k7m29xqa",
+      },
+    ],
+    response: {
+      kind: "json",
+      value: {
+        code: "k7m29xqa",
+        entries: [
+          {
+            source: "rajadonghua",
+            slug: "tales-of-herding-gods",
+            ep: "1",
+            epNumber: 1,
+            title: "Tales of Herding Gods",
+            poster: null,
+            position: 420,
+            duration: 1200,
+            seen: [1],
+            updatedAt: 1761290000000,
+          },
+        ],
+        updatedAt: "2026-10-24T07:12:25.412Z",
+      },
+    },
+    notes: [
+      "`404 not_found` means the code has not synced anything yet.",
+      "`503 sync_disabled` means the server has no database configured.",
+    ],
+  },
+  {
+    id: "sync-write",
+    group: "sync",
+    title: "Merge watch sync",
+    method: "PUT",
+    path: "/api/sync/:code",
+    summary: "Push local entries; the server merges instead of overwriting.",
+    description:
+      "Body: `{ \"entries\": ProgressEntry[] }` (max 200 entries, ~200 KB). Per series the newest `updatedAt` wins, and `seen` arrays are unioned, so an episode finished on one device stays finished everywhere. The response is the merged list, which the client writes back locally.",
+    params: [
+      {
+        name: "code",
+        in: "path",
+        required: true,
+        type: "string",
+        desc: "Device code, same value on both devices.",
+        example: "k7m29xqa",
+      },
+    ],
+    response: { kind: "json", value: { code: "k7m29xqa", entries: [], updatedAt: "2026-10-24T07:12:25.891Z" } },
+    notes: [
+      "Merging is idempotent: sending the same payload twice changes nothing.",
+      "`413 payload_too_large` is returned when the JSON body exceeds the cap.",
+    ],
   },
   {
     id: "home",

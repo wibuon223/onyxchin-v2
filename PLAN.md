@@ -66,6 +66,25 @@ Kartu episode (mis. `beyond-times-gaze-episode-45-…`) tetap bisa diklik karena
 Service worker: cache-first untuk shell & aset, network-first untuk JSON API dengan fallback cache, dan **tidak menyentuh** `/api/media`, `/api/hls`, `.ts/.m4s/.mp4` (video tetap langsung dari jaringan).
 Terbukti di production: 1 registrasi, scope `/`, `controller: true`, dan reload saat offline tetap menampilkan shell.
 
+### Sinkron antar perangkat
+
+Riwayat tonton bisa dipakai lintas device lewat **kode** (tanpa akun):
+
+```
+PUT /api/sync/:code   { entries: ProgressEntry[] }   → merge, kembalikan hasil
+GET /api/sync/:code                                   → 404 kalau kode belum ada
+```
+
+Merge: per seri `updatedAt` terbaru menang, `seen` di-union. Body cap ~200 KB / 200 entri.
+Klien (`apps/web/src/lib/sync.ts`): pull saat boot + tiap 60 s / tab terlihat, push
+debounce 5 s tiap `saveProgress`, echo merge ditekan supaya tidak loop.
+
+Butuh `DATABASE_URL` (Render Postgres `onyxchin-sync`, singapore, plan free). Tanpa env
+itu `/api/sync/*` → 503 dan tombol Sinkron tetap muncul tapi melaporkan gagal.
+
+**Catatan**: Postgres free Render dibatasi masa hidupnya; kalau instance dihapus, cukup
+buat baru + ganti `DATABASE_URL` — skema dibuat otomatis (`create table if not exists`).
+
 ---
 
 ## 1. Recon — hasil probe live (24 Okt 2026)

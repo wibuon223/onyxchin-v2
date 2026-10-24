@@ -38,6 +38,7 @@ function buildNavGroups(): NavGroup[] {
     endpointGroup("discovery"),
     endpointGroup("catalog"),
     endpointGroup("proxy"),
+    endpointGroup("sync"),
     {
       label: "Reference",
       items: [
