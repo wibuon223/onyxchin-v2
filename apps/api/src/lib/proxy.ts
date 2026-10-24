@@ -97,8 +97,21 @@ export async function proxyMedia(c: Context) {
   const referer = c.req.query("ref") || new URL(decoded).origin + "/";
   try {
     const res = await fetchUpstream(decoded, { referer, range, timeoutMs: 40000 });
-    const headers = new Headers();
     const upstreamType = res.headers.get("content-type") ?? "";
+    // HLS masters point at variant playlists, not segments. The browser reaches
+    // those through /api/hls/seg, so this endpoint must rewrite nested playlists
+    // too — otherwise relative segment paths resolve against our own origin.
+    if (isPlaylist(decoded, upstreamType)) {
+      const text = await res.text();
+      return new Response(rewritePlaylist(text, new URL(decoded), referer), {
+        headers: {
+          "content-type": "application/vnd.apple.mpegurl",
+          "access-control-allow-origin": "*",
+          "cache-control": "no-store",
+        },
+      });
+    }
+    const headers = new Headers();
     for (const h of ["content-length", "content-range", "accept-ranges", "etag", "last-modified"]) {
       const v = res.headers.get(h);
       if (v) headers.set(h, v);
@@ -110,6 +123,26 @@ export async function proxyMedia(c: Context) {
   } catch {
     return c.json({ error: "upstream failed" }, 502);
   }
+}
+
+function isPlaylist(url: string, contentType: string): boolean {
+  if (/mpegurl/i.test(contentType)) return true;
+  return url.split("?")[0].toLowerCase().endsWith(".m3u8");
+}
+
+/** Rewrite every URI in a playlist so the browser only ever talks to us. */
+export function rewritePlaylist(text: string, base: URL, referer?: string): string {
+  return text
+    .split("\n")
+    .map((line) => {
+      const l = line.trim();
+      if (!l) return line;
+      if (l.startsWith("#")) {
+        return line.replace(/URI="([^"]+)"/g, (_m, uri) => `URI="${segUrl(base, uri, referer)}"`);
+      }
+      return segUrl(base, l, referer);
+    })
+    .join("\n");
 }
 
 function mediaType(url: string, upstream: string): string {
@@ -171,17 +204,7 @@ export async function proxyHls(c: Context) {
     const dmReferer = c.req.query("ref") || base.origin + "/";
     const res = await fetchUpstream(decoded, { referer: dmReferer, timeoutMs: 30000 });
     const text = await res.text();
-    const out = text
-      .split("\n")
-      .map((line) => {
-        const l = line.trim();
-        if (!l) return line;
-        if (l.startsWith("#")) {
-          return line.replace(/URI="([^"]+)"/g, (_m, uri) => `URI="${segUrl(base, uri, dmReferer)}"`);
-        }
-        return segUrl(base, l, dmReferer);
-      })
-      .join("\n");
+    const out = rewritePlaylist(text, base, dmReferer);
     return new Response(out, {
       headers: {
         "content-type": "application/vnd.apple.mpegurl",
