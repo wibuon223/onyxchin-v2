@@ -51,8 +51,11 @@ export async function fetchDocDetailed(
     return done(await fetchViaProxy(url, opts), "proxy");
   }
   const forceRelay = process.env.ONYX_RELAY_ONLY === "1";
+  // Known bot-walled hosts never answer Render directly (Cloudflare stalls ~20s
+  // before a 403), so skip that dead end instead of burning the request budget.
+  const knownBlocked = shouldProxy(url, null) || relayAllowed(url);
   let lastError: unknown = null;
-  if (!forceRelay) {
+  if (!forceRelay && !knownBlocked) {
     try {
       return done(await fetchRaw(url, opts), "direct");
     } catch (err) {
