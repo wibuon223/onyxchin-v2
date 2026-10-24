@@ -90,9 +90,47 @@ function readRaw(): ProgressEntry[] {
 function writeRaw(entries: ProgressEntry[]): void {
   try {
     window.localStorage.setItem(KEY, JSON.stringify(entries.slice(0, LIMIT)));
+    window.dispatchEvent(new Event("onyxchin:progress"));
   } catch {
     /* storage may be full or blocked — history is best-effort */
   }
+}
+
+/**
+ * Fold remote entries into the local list: newest wins per series, seen lists
+ * are unioned so an episode watched on either device stays watched.
+ */
+export function mergeProgress(remote: ProgressEntry[]): ProgressEntry[] {
+  const byKey = new Map<string, ProgressEntry>();
+  for (const entry of [...readRaw(), ...remote]) {
+    const key = `${entry.source}|${entry.slug}`;
+    const current = byKey.get(key);
+    if (!current) {
+      byKey.set(key, entry);
+      continue;
+    }
+    const newer = entry.updatedAt >= current.updatedAt ? entry : current;
+    byKey.set(key, {
+      ...newer,
+      seen: [...new Set([...current.seen, ...entry.seen])].sort((a, b) => a - b),
+      duration: newer.duration || current.duration,
+    });
+  }
+  const merged = [...byKey.values()]
+    .sort((a, b) => b.updatedAt - a.updatedAt)
+    .slice(0, LIMIT);
+  try {
+    window.localStorage.setItem(KEY, JSON.stringify(merged));
+  } catch {
+    /* storage may be full or blocked */
+  }
+  announce();
+  return merged;
+}
+
+/** Broadcast so mounted pages can re-read without prop drilling. */
+function announce(): void {
+  window.dispatchEvent(new Event("onyxchin:progress"));
 }
 
 export function readProgress(): ProgressEntry[] {

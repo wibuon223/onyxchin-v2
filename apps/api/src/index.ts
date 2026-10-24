@@ -7,11 +7,12 @@ import { proxyImage, proxyMedia, proxyHls, proxySubtitle } from "./lib/proxy.js"
 import { cached, cacheStats } from "./lib/cache.js";
 import { jsonCached, jsonNoStore } from "./lib/respond.js";
 import { fetchDocDetailed } from "./lib/http.js";
+import { isValidCode, readSync, sanitizeEntries, syncAvailable, writeSync } from "./lib/sync.js";
 import type { SourceId } from "@onyxchin/shared";
 
 const app = new Hono();
 app.use("*", logger());
-app.use("*", cors({ origin: "*", allowMethods: ["GET", "OPTIONS"], maxAge: 86400 }));
+app.use("*", cors({ origin: "*", allowMethods: ["GET", "PUT", "OPTIONS"], maxAge: 86400 }));
 
 app.get("/api/health", (c) =>
   c.json({
@@ -19,6 +20,7 @@ app.get("/api/health", (c) =>
     service: "onyxchin-api",
     sources: sourceList.map((s) => s.id),
     cache: cacheStats(),
+    sync: syncAvailable(),
     memory: memorySnapshot(),
     ts: Date.now(),
   })
@@ -72,6 +74,41 @@ app.get("/api/hls", proxyHls);
 app.get("/api/hls/seg", proxyMedia);
 app.get("/api/media", proxyMedia);
 app.get("/api/sub", proxySubtitle);
+
+app.get("/api/sync/:code", async (c) => {
+  if (!syncAvailable()) return c.json({ error: "sync_disabled" }, 503);
+  const code = c.req.param("code").toLowerCase();
+  if (!isValidCode(code)) return c.json({ error: "invalid_code" }, 400);
+  try {
+    const snapshot = await readSync(code);
+    if (!snapshot) return c.json({ error: "not_found" }, 404);
+    return c.json({ code, ...snapshot });
+  } catch {
+    return c.json({ error: "sync_unavailable" }, 503);
+  }
+});
+
+app.put("/api/sync/:code", async (c) => {
+  if (!syncAvailable()) return c.json({ error: "sync_disabled" }, 503);
+  const code = c.req.param("code").toLowerCase();
+  if (!isValidCode(code)) return c.json({ error: "invalid_code" }, 400);
+  let body: unknown;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: "invalid_json" }, 400);
+  }
+  const payload = body as { entries?: unknown };
+  const entries = sanitizeEntries(payload?.entries);
+  try {
+    const snapshot = await writeSync(code, entries);
+    return c.json({ code, ...snapshot });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message === "payload_too_large") return c.json({ error: "payload_too_large" }, 413);
+    return c.json({ error: "sync_unavailable" }, 503);
+  }
+});
 
 app.get("/api/:source/home", async (c) => {
   const src = pick(c.req.param("source"));
