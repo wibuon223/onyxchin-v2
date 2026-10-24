@@ -35,7 +35,7 @@ const DOWNLOAD_HOSTS = ["mega.nz", "mega.co.nz", "pixeldrain", "drive.google.com
 /** DoodStream family: reachable, but refuses embeds on unknown domains. */
 const DOOD_HOSTS = /(^|\.)(do+od\.(to|so|watch|li|pm|sh|ws|com)|playmogo\.com|doodstream|doodapi|ds2play)/i;
 /** Mirrors whose TLS handshake no longer completes (verified 2026-10-24). */
-const DEAD_HOSTS = /(^|\.)(ahvsh\.com|sblona\.com|fembed\.com)$/i;
+const DEAD_HOSTS = /(^|\.)(ahvsh\.com|sblona\.com|vanfem\.com|fembed\.com|femax\d*\.com|fvd\d*\.com)$/i;
 
 const STATUS_FILTERS = new Set(["ongoing", "completed", "upcoming", "hiatus"]);
 

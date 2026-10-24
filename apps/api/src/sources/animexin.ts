@@ -276,7 +276,7 @@ const HOST_RULES: HostRule[] = [
     note: "embed dibatasi",
   },
   {
-    test: /(^|\.)(ahvsh\.com|sblona\.com|fembed\.com)$/i,
+    test: /(^|\.)(ahvsh\.com|sblona\.com|vanfem\.com|fembed\.com|femax\d*\.com|fvd\d*\.com)$/i,
     name: "Mirror mati",
     kind: "iframe",
     playable: false,
