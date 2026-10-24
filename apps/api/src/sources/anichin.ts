@@ -32,6 +32,11 @@ const PUBLIC_IMAGE_HOSTS = [
 /** Download pages that can appear in a mirror dropdown but are not players. */
 const DOWNLOAD_HOSTS = ["mega.nz", "mega.co.nz", "pixeldrain", "drive.google.com", "mediafire", "mitedrive", "buzzheavier", "qiwi"];
 
+/** DoodStream family: reachable, but refuses embeds on unknown domains. */
+const DOOD_HOSTS = /(^|\.)(do+od\.(to|so|watch|li|pm|sh|ws|com)|playmogo\.com|doodstream|doodapi|ds2play)/i;
+/** Mirrors whose TLS handshake no longer completes (verified 2026-10-24). */
+const DEAD_HOSTS = /(^|\.)(ahvsh\.com|sblona\.com|fembed\.com)$/i;
+
 const STATUS_FILTERS = new Set(["ongoing", "completed", "upcoming", "hiatus"]);
 
 const cache = new Map<string, { at: number; html: string }>();
@@ -435,7 +440,13 @@ export const anichin: SourceAdapter = {
       const source: VideoSource = { id: `mirror-${index}`, label: label || host, kind: "iframe", url, playable: true };
       const quality = /(\d{3,4}p)/i.exec(label)?.[1];
       if (quality) source.quality = quality;
-      if (host.includes("dailymotion")) {
+      if (DOOD_HOSTS.test(host)) {
+        source.playable = false;
+        source.note = "embed dibatasi";
+      } else if (DEAD_HOSTS.test(host)) {
+        source.playable = false;
+        source.note = "host tidak merespons";
+      } else if (host.includes("dailymotion")) {
         source.playable = false;
         source.note = "domain-locked";
       } else if (DOWNLOAD_HOSTS.some((known) => host.includes(known))) {

@@ -269,11 +269,18 @@ interface HostRule {
 
 const HOST_RULES: HostRule[] = [
   {
-    test: /(^|\.)dood\.(to|so|watch|li|pm|sh|ws)$|(^|\.)playmogo\.com$|doodstream|doodapi/i,
+    test: /(^|\.)(do+od\.(to|so|watch|li|pm|sh|ws|com)|playmogo\.com|doodstream|doodapi|ds2play)/i,
     name: "DoodStream",
     kind: "iframe",
     playable: false,
-    note: "sering mati di IP server",
+    note: "embed dibatasi",
+  },
+  {
+    test: /(^|\.)(ahvsh\.com|sblona\.com|fembed\.com)$/i,
+    name: "Mirror mati",
+    kind: "iframe",
+    playable: false,
+    note: "host tidak merespons",
   },
   {
     test: /(^|\.)dailymotion\.com$/i,
