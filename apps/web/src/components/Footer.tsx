@@ -19,10 +19,7 @@ export function Footer() {
             API Docs
           </a>
         </nav>
-        <p className="foot__note mono mono--faint">
-          OnyxChin menampilkan katalog dan memutar tautan publik milik sumber pihak
-          ketiga. Tidak menyimpan berkas video.
-        </p>
+        <p className="foot__note mono mono--faint">OnyxChin — indeks katalog &amp; pemutar.</p>
       </div>
     </footer>
   );

@@ -134,7 +134,7 @@ export function Header({ onOpenSearch }: HeaderProps) {
               Cari donghua
               <span className="kbd">⌘K</span>
             </button>
-            <p className="sheet__note mono mono--faint">Katalog pihak ketiga · OnyxChin</p>
+            <p className="sheet__note mono mono--faint">OnyxChin · 4 sumber</p>
           </div>
         </div>
       ) : null}
