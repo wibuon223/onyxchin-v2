@@ -47,7 +47,10 @@ app.get("/api/diag", async (c) => {
     delete process.env.ONYX_FORCE_PROXY;
     return c.json({ via, ms, status: res.status, bytes: body.length, attempts, sample: body.slice(0, 80) });
   } catch (e) {
-    return c.json({ error: String(e) }, 502);
+    delete process.env.ONYX_RELAY_ONLY;
+    delete process.env.ONYX_FORCE_PROXY;
+    const attempts = (e as { attempts?: unknown }).attempts ?? [];
+    return c.json({ error: String(e), attempts }, 502);
   }
 });
 
