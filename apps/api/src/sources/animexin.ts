@@ -459,6 +459,64 @@ function widgetCards($: CheerioAPI, selector: string): Card[] {
   return out;
 }
 
+/** Series widgets (`.wpop`) list real series pages, unlike the episode feed. */
+function seriesWidgetCards($: CheerioAPI, selector: string): Card[] {
+  const out: Card[] = [];
+  const seen = new Set<string>();
+  $(selector).each((_, el) => {
+    const $el = $(el);
+    const link = $el.find("a.series").first();
+    const slug = slugOf(link.attr("href"));
+    if (!slug || seen.has(slug)) return;
+    const title =
+      clean($el.find("h4 a").first().text()) || clean(link.attr("title")) || clean(link.text());
+    if (!title) return;
+    const img = $el.find("img").first();
+    seen.add(slug);
+    out.push({
+      id: slug,
+      slug,
+      title,
+      poster: poster(img.attr("src") ?? img.attr("data-src") ?? img.attr("data-lazy-src")),
+    });
+  });
+  return out;
+}
+
+/**
+ * Homepage feeds (Popular Today / Latest Release) link to episode posts. Our
+ * detail() resolves an episode slug back to its series, so these stay clickable.
+ */
+function episodeFeedCards($: CheerioAPI, selector: string): Card[] {
+  const out: Card[] = [];
+  const seen = new Set<string>();
+  $(selector).each((_, el) => {
+    const $el = $(el);
+    const link = $el.find("a.tip, .bsx > a").first();
+    const href = link.attr("href");
+    const slug = slugOf(href);
+    if (!slug || seen.has(slug)) return;
+    const raw = clean(link.attr("title")) || clean($el.find(".tt h2").first().text());
+    if (!raw) return;
+    const title = raw
+      .replace(/\s+Episode\s+\d+.*$/i, "")
+      .replace(/\s+(Indonesia|English|Subtitle|Sub)[,\s].*$/i, "")
+      .trim();
+    const badge = clean($el.find(".epx").first().text());
+    const episodeNumber = Number.parseInt(/(\d+)/.exec(badge)?.[1] ?? "", 10);
+    const img = $el.find("img.ts-post-image, img").first();
+    seen.add(slug);
+    out.push({
+      id: slug,
+      slug,
+      title: title || raw,
+      poster: poster(img.attr("src") ?? img.attr("data-src") ?? img.attr("data-lazy-src")),
+      ...(Number.isFinite(episodeNumber) ? { episodes: episodeNumber } : {}),
+    });
+  });
+  return out;
+}
+
 async function fetchSeriesPage(url: string): Promise<{ items: Card[]; hasNext: boolean }> {
   const $ = load(await fetchText(url, { referer: REFERER }));
   return { items: cardList($, ".listupd article.bs"), hasNext: $(".hpage a.r").length > 0 };
@@ -471,24 +529,26 @@ export const animexin: SourceAdapter = {
   lang: "id",
 
   async home(): Promise<HomePayload> {
-    const [homeDoc, latest, second] = await Promise.allSettled([
+    const [homeDoc, latestSeries] = await Promise.allSettled([
       fetchText(`${BASE}/`, { referer: REFERER }),
       fetchSeriesPage(`${BASE}/anime/`),
-      fetchSeriesPage(`${BASE}/anime/page/2/`),
     ]);
 
     const $home = homeDoc.status === "fulfilled" ? load(homeDoc.value) : null;
-    const latestItems = latest.status === "fulfilled" ? latest.value.items.slice(0, 20) : [];
-    const olderItems = second.status === "fulfilled" ? second.value.items.slice(0, 20) : [];
-    const popular = $home ? widgetCards($home, ".wpop-weekly li, .wpop-alltime li").slice(0, 20) : [];
-    const recommended = $home ? widgetCards($home, ".series-gen .tab-pane article").slice(0, 20) : [];
+    const series = latestSeries.status === "fulfilled" ? latestSeries.value.items.slice(0, 20) : [];
 
-    const hero = (latestItems.length ? latestItems : popular).slice(0, 6);
+    const popularToday = $home ? episodeFeedCards($home, ".listupd.popularslider article.bs").slice(0, 12) : [];
+    const latestRelease = $home ? episodeFeedCards($home, ".listupd.normal article.bs").slice(0, 20) : [];
+    const weekly = $home ? seriesWidgetCards($home, ".wpop-weekly li").slice(0, 12) : [];
+    const allTime = $home ? seriesWidgetCards($home, ".wpop-alltime li").slice(0, 12) : [];
+
+    const hero = (series.length ? series : popularToday).slice(0, 6);
     const sections = distinctRows([
-      ["Terbaru", latestItems],
-      ["Populer", popular],
-      ["Rekomendasi", recommended],
-      ["Arsip Lainnya", olderItems],
+      ["Terbaru", series],
+      ["Populer Hari Ini", popularToday],
+      ["Baru Rilis", latestRelease],
+      ["Populer Mingguan", weekly],
+      ["Populer Sepanjang Waktu", allTime],
     ]);
 
     return { hero, sections };
