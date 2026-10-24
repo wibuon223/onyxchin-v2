@@ -19,8 +19,10 @@ export interface DmResolved {
   title: string;
   duration: number;
   private: boolean;
-  manifest: string;
+  manifest: string | null;
   referer: string;
+  /** Set when Dailymotion itself says the video is gone (DM005/404). */
+  unavailable?: string;
 }
 
 const CACHE_TTL = 10 * 60_000;
@@ -71,7 +73,8 @@ interface DmMetadata {
   title?: string;
   duration?: number;
   private?: boolean;
-  qualities?: { auto?: { type?: string; url?: string }[] };
+  qualities?: { auto?: { type?: string; url?: string }[] } | null;
+  error?: { code?: string; status_code?: number; message?: string; title?: string };
 }
 
 export async function resolveDailymotion(url: string): Promise<DmResolved | null> {
@@ -84,16 +87,20 @@ export async function resolveDailymotion(url: string): Promise<DmResolved | null
   try {
     const meta = await fetchMetadata(id);
     const manifest = meta.qualities?.auto?.find((q) => q.url)?.url ?? null;
-    const value: DmResolved | null = manifest
-      ? {
-          id,
-          title: meta.title ?? "",
-          duration: meta.duration ?? 0,
-          private: Boolean(meta.private),
-          manifest,
-          referer: "https://geo.dailymotion.com/",
-        }
-      : null;
+    const errCode = meta.error?.code ?? "";
+    const gone = !manifest && (errCode === "DM005" || errCode === "404" || meta.error?.status_code === 410);
+    const value: DmResolved | null =
+      manifest || gone
+        ? {
+            id,
+            title: meta.title ?? "",
+            duration: meta.duration ?? 0,
+            private: Boolean(meta.private),
+            manifest,
+            referer: "https://geo.dailymotion.com/",
+            ...(gone ? { unavailable: meta.error?.message ?? "video dihapus di sumber" } : {}),
+          }
+        : null;
     cache.set(id, { value, expires: Date.now() + CACHE_TTL });
     return value;
   } catch {
@@ -121,7 +128,7 @@ export async function upgradeDailymotionSources(sources: VideoSource[]): Promise
         return;
       }
       const resolved = await resolveDailymotion(source.url);
-      if (resolved) {
+      if (resolved?.manifest) {
         out.push({
           id: `${source.id}-hls`,
           label: source.label.replace(/\s*\[Ads\]/i, "") || "Dailymotion",
@@ -131,8 +138,14 @@ export async function upgradeDailymotionSources(sources: VideoSource[]): Promise
           playable: true,
           note: "HLS via relay",
         });
+        out.push({ ...source, playable: false, note: source.note ?? "domain-locked" });
+        return;
       }
-      out.push({ ...source, playable: false, note: source.note ?? "domain-locked" });
+      out.push({
+        ...source,
+        playable: false,
+        note: resolved?.unavailable ? "dihapus di sumber" : (source.note ?? "domain-locked"),
+      });
     })
   );
   return out.sort((a, b) => Number(b.playable) - Number(a.playable));
