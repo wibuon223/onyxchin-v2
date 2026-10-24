@@ -19,6 +19,7 @@ app.get("/api/health", (c) =>
     service: "onyxchin-api",
     sources: sourceList.map((s) => s.id),
     cache: cacheStats(),
+    memory: memorySnapshot(),
     ts: Date.now(),
   })
 );
@@ -146,6 +147,17 @@ function errorStatus(e: unknown): 400 | 403 | 404 | 502 {
 
 function pick(id: string) {
   return sources[id as SourceId];
+}
+
+
+/** Render free instances die at 512 MB; expose the number so it is visible early. */
+function memorySnapshot() {
+  const usage = process.memoryUsage();
+  return {
+    rssMb: Math.round(usage.rss / 1024 / 1024),
+    heapMb: Math.round(usage.heapUsed / 1024 / 1024),
+    limitMb: 512,
+  };
 }
 
 const port = Number(process.env.PORT ?? 8891);
