@@ -70,6 +70,7 @@ class Handler(BaseHTTPRequestHandler):
             "Accept": "*/*",
             "Accept-Language": "en-US,en;q=0.9",
             "Referer": referer,
+            "Accept-Encoding": "identity",
         }
         rng = self.headers.get("range")
         if rng:
@@ -81,6 +82,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"error": "upstream failed", "detail": str(exc)[:160]}, 502)
 
         self.send_response(r.status_code)
+        self.send_header("Connection", "close")
+        self.close_connection = True
         for name in PASS_HEADERS:
             value = r.headers.get(name)
             if value:
