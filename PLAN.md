@@ -55,9 +55,9 @@ YunshanID dibuang (banyak judul cuma punya 1 mirror). Sisa **4 sumber**, section
 | Raja Donghua | **6** — Terbaru, Populer, Action, Fantasy, Adventure, Martial Arts | genre pakai `sort=rating` supaya tidak sama dengan Populer |
 | Anichin | **6** — sama | genre page `/genres/<slug>/` benar-benar memfilter |
 | Donghua World | **6** — Terbaru, Populer Minggu Ini, All-Time, Rekomendasi, Sedang Tayang, Selesai | status filter terbukti beda |
-| AnimeXin | **1** — Terbaru | upstream mengabaikan `page`, `order`, `status`, `genre[]` (semua query balik daftar sama) |
+| AnimeXin | **5** — Terbaru, Populer Hari Ini, Baru Rilis, Populer Mingguan, Populer Sepanjang Waktu | genre/order di `/anime/` memang diabaikan, tapi homepage punya widget asli (`popularslider`, `latesthome`, `.wpop-weekly`, `.wpop-alltime`) |
 
-AnimeXin tetap dipertahankan karena halaman watch-nya punya 8 mirror/episode; home-nya diberi keterangan "sumber ini mengabaikan filter upstream".
+Kartu episode (mis. `beyond-times-gaze-episode-45-…`) tetap bisa diklik karena `detail()` animexin menyelesaikan episode slug ke series induknya.
 
 ---
 
