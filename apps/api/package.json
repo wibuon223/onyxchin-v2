@@ -13,12 +13,10 @@
     "@onyxchin/shared": "*",
     "cheerio": "^1.0.0",
     "hono": "^4.6.14",
-    "pg": "^8.23.1",
     "undici": "^8.12.3"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
-    "@types/pg": "^8.23.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }

@@ -7,7 +7,6 @@ import { proxyImage, proxyMedia, proxyHls, proxySubtitle } from "./lib/proxy.js"
 import { cached, cacheStats } from "./lib/cache.js";
 import { jsonCached, jsonNoStore } from "./lib/respond.js";
 import { fetchDocDetailed } from "./lib/http.js";
-import { isValidCode, readSync, sanitizeEntries, syncAvailable, writeSync } from "./lib/sync.js";
 import type { SourceId } from "@onyxchin/shared";
 
 const app = new Hono();
@@ -20,7 +19,6 @@ app.get("/api/health", (c) =>
     service: "onyxchin-api",
     sources: sourceList.map((s) => s.id),
     cache: cacheStats(),
-    sync: syncAvailable(),
     memory: memorySnapshot(),
     ts: Date.now(),
   })
@@ -74,63 +72,6 @@ app.get("/api/hls", proxyHls);
 app.get("/api/hls/seg", proxyMedia);
 app.get("/api/media", proxyMedia);
 app.get("/api/sub", proxySubtitle);
-
-app.get("/api/sync/:code", async (c) => {
-  if (!syncAvailable()) return c.json({ error: "sync_disabled" }, 503);
-  const code = c.req.param("code").toLowerCase().replace(/[^a-z0-9]/g, "");
-  if (!isValidCode(code)) return c.json({ error: "invalid_code" }, 400);
-  try {
-    const snapshot = await readSync(code);
-    if (!snapshot) return c.json({ error: "not_found" }, 404);
-    return c.json({ code, ...snapshot });
-  } catch (error) {
-    console.error("[sync:get]", error);
-    return c.json({ error: "sync_unavailable" }, 503);
-  }
-});
-
-const SYNC_WRITE_WINDOW_MS = 60_000;
-const SYNC_WRITE_LIMIT = 30;
-const syncWrites = new Map<string, { count: number; resetAt: number }>();
-
-function syncWriteAllowed(ip: string): boolean {
-  const now = Date.now();
-  const bucket = syncWrites.get(ip);
-  if (!bucket || bucket.resetAt <= now) {
-    syncWrites.set(ip, { count: 1, resetAt: now + SYNC_WRITE_WINDOW_MS });
-    if (syncWrites.size > 500) {
-      for (const [key, value] of syncWrites) if (value.resetAt <= now) syncWrites.delete(key);
-    }
-    return true;
-  }
-  bucket.count += 1;
-  return bucket.count <= SYNC_WRITE_LIMIT;
-}
-
-app.put("/api/sync/:code", async (c) => {
-  const ip = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  if (!syncWriteAllowed(ip)) return c.json({ error: "rate_limited" }, 429);
-  if (!syncAvailable()) return c.json({ error: "sync_disabled" }, 503);
-  const code = c.req.param("code").toLowerCase().replace(/[^a-z0-9]/g, "");
-  if (!isValidCode(code)) return c.json({ error: "invalid_code" }, 400);
-  let body: unknown;
-  try {
-    body = await c.req.json();
-  } catch {
-    return c.json({ error: "invalid_json" }, 400);
-  }
-  const payload = body as { entries?: unknown };
-  const entries = sanitizeEntries(payload?.entries);
-  try {
-    const snapshot = await writeSync(code, entries);
-    return c.json({ code, ...snapshot });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "";
-    if (message === "payload_too_large") return c.json({ error: "payload_too_large" }, 413);
-    console.error("[sync:put]", error);
-    return c.json({ error: "sync_unavailable" }, 503);
-  }
-});
 
 app.get("/api/:source/home", async (c) => {
   const src = pick(c.req.param("source"));

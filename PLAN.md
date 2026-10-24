@@ -66,24 +66,12 @@ Kartu episode (mis. `beyond-times-gaze-episode-45-…`) tetap bisa diklik karena
 Service worker: cache-first untuk shell & aset, network-first untuk JSON API dengan fallback cache, dan **tidak menyentuh** `/api/media`, `/api/hls`, `.ts/.m4s/.mp4` (video tetap langsung dari jaringan).
 Terbukti di production: 1 registrasi, scope `/`, `controller: true`, dan reload saat offline tetap menampilkan shell.
 
-### Sinkron antar perangkat
+### Sinkron antar perangkat (dibatalkan)
 
-Riwayat tonton bisa dipakai lintas device lewat **kode** (tanpa akun):
-
-```
-PUT /api/sync/:code   { entries: ProgressEntry[] }   → merge, kembalikan hasil
-GET /api/sync/:code                                   → 404 kalau kode belum ada
-```
-
-Merge: per seri `updatedAt` terbaru menang, `seen` di-union. Body cap ~200 KB / 200 entri.
-Klien (`apps/web/src/lib/sync.ts`): pull saat boot + tiap 60 s / tab terlihat, push
-debounce 5 s tiap `saveProgress`, echo merge ditekan supaya tidak loop.
-
-Butuh `DATABASE_URL` (Render Postgres `onyxchin-sync`, singapore, plan free). Tanpa env
-itu `/api/sync/*` → 503 dan tombol Sinkron tetap muncul tapi melaporkan gagal.
-
-**Catatan**: Postgres free Render dibatasi masa hidupnya; kalau instance dihapus, cukup
-buat baru + ganti `DATABASE_URL` — skema dibuat otomatis (`create table if not exists`).
+Sempat dibangun dengan Render Postgres, lalu **dihapus** atas permintaan: resource
+tambahan (expiry 30 hari, 1 DB free per workspace) tidak sepadan untuk riwayat tonton.
+Riwayat tetap murni localStorage (`apps/web/src/lib/progress.ts`). Tidak ada route
+`/api/sync/*`, tidak ada `DATABASE_URL`, tidak ada dependency `pg`.
 
 ---
 

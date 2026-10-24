@@ -23,7 +23,6 @@ export type IconName =
   | "external"
   | "warning"
   | "trash"
-  | "link"
   | "subtitles";
 
 const ICONS: Record<IconName, ReactElement> = {
@@ -109,12 +108,6 @@ const ICONS: Record<IconName, ReactElement> = {
       <path d="M12 4.5 21 20H3z" />
       <path d="M12 10v4.5" />
       <circle cx="12" cy="17.3" r="0.9" fill="currentColor" stroke="none" />
-    </>
-  ),
-  link: (
-    <>
-      <path d="M10 13.5a4 4 0 0 0 5.7 0l2.3-2.3a4 4 0 0 0-5.7-5.7L11 6.8" />
-      <path d="M14 10.5a4 4 0 0 0-5.7 0l-2.3 2.3a4 4 0 0 0 5.7 5.7l1.3-1.3" />
     </>
   ),
   trash: (

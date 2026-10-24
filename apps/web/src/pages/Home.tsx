@@ -13,8 +13,6 @@ import { Row } from "../components/Row";
 import { SectionHead } from "../components/SectionHead";
 import { HeroSkeleton, RowSkeleton } from "../components/Skeleton";
 import { EmptyState, ErrorCard } from "../components/State";
-import { SyncDialog } from "../components/SyncDialog";
-import { getSyncCode } from "../lib/sync";
 
 export function Home() {
   const { source, sourceInfo } = useSources();
@@ -25,7 +23,6 @@ export function Home() {
 
   const [heroIndex, setHeroIndex] = useState(0);
   const [history, setHistory] = useState<ProgressEntry[]>([]);
-  const [syncOpen, setSyncOpen] = useState(false);
 
   useEffect(() => {
     setHeroIndex(0);
@@ -36,6 +33,7 @@ export function Home() {
     const refresh = () => setHistory(readProgress());
     window.addEventListener("onyxchin:progress", refresh);
     return () => window.removeEventListener("onyxchin:progress", refresh);
+
   }, [source]);
 
   const activeCard = heroCards[Math.min(heroIndex, Math.max(heroCards.length - 1, 0))] ?? null;
@@ -210,27 +208,17 @@ export function Home() {
             index={1}
             title="Lanjut tonton"
             aside={
-              <>
-                <button
-                  type="button"
-                  className="sect-head__more mono"
-                  onClick={() => setSyncOpen(true)}
-                >
-                  <Icon name="link" size={12} />
-                  {getSyncCode() ? "Tersinkron" : "Sinkron"}
-                </button>
-                <button
-                  type="button"
-                  className="sect-head__more mono"
-                  onClick={() => {
-                    clearProgress();
-                    setHistory([]);
-                  }}
-                >
-                  <Icon name="trash" size={12} />
-                  Bersihkan
-                </button>
-              </>
+              <button
+                type="button"
+                className="sect-head__more mono"
+                onClick={() => {
+                  clearProgress();
+                  setHistory([]);
+                }}
+              >
+                <Icon name="trash" size={12} />
+                Bersihkan
+              </button>
             }
           />
           <Row label="Lanjut tonton">
@@ -317,7 +305,6 @@ export function Home() {
           </Link>
         </div>
       ) : null}
-      <SyncDialog open={syncOpen} onClose={() => setSyncOpen(false)} />
     </div>
   );
 }
