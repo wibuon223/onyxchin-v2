@@ -5,6 +5,7 @@ import { logger } from "hono/logger";
 import { sources, sourceList } from "./registry.js";
 import { proxyImage, proxyMedia, proxyHls, proxySubtitle } from "./lib/proxy.js";
 import { cached, cacheStats } from "./lib/cache.js";
+import { jsonCached, jsonNoStore } from "./lib/respond.js";
 import { fetchDocDetailed } from "./lib/http.js";
 import type { SourceId } from "@onyxchin/shared";
 
@@ -55,14 +56,14 @@ app.get("/api/diag", async (c) => {
 });
 
 app.get("/api/sources", (c) =>
-  c.json({
+  jsonCached(c, {
     data: sourceList.map((s) => ({
       id: s.id,
       name: s.name,
       baseUrl: s.baseUrl,
       lang: s.lang,
     })),
-  })
+  }, { maxAge: 300, sMaxAge: 600, swr: 3600 })
 );
 
 app.get("/api/img", proxyImage);
@@ -76,7 +77,7 @@ app.get("/api/:source/home", async (c) => {
   if (!src) return c.json({ error: "unknown source" }, 404);
   try {
     const data = await cached(`${src.id}:home`, 300_000, () => src.home());
-    return c.json({ data });
+    return jsonCached(c, { data }, { maxAge: 30, sMaxAge: 300, swr: 1200 });
   } catch (e) {
     return c.json({ error: String(e) }, 502);
   }
@@ -93,7 +94,7 @@ app.get("/api/:source/list", async (c) => {
     const data = await cached(`${src.id}:list:${page}:${genre ?? ""}:${status ?? ""}:${order ?? ""}`, 180_000, () =>
       src.list({ page, genre, status, order })
     );
-    return c.json({ data });
+    return jsonCached(c, { data }, { maxAge: 30, sMaxAge: 180, swr: 720 });
   } catch (e) {
     return c.json({ error: String(e) }, 502);
   }
@@ -106,7 +107,7 @@ app.get("/api/:source/search", async (c) => {
   if (!q) return c.json({ data: [] });
   try {
     const data = await cached(`${src.id}:search:${q.toLowerCase()}`, 300_000, () => src.search(q));
-    return c.json({ data });
+    return jsonCached(c, { data }, { maxAge: 60, sMaxAge: 300, swr: 900 });
   } catch (e) {
     return c.json({ error: String(e) }, 502);
   }
@@ -118,7 +119,7 @@ app.get("/api/:source/anime/:slug", async (c) => {
   try {
     const slug = c.req.param("slug");
     const data = await cached(`${src.id}:detail:${slug}`, 600_000, () => src.detail(slug));
-    return c.json({ data });
+    return jsonCached(c, { data }, { maxAge: 60, sMaxAge: 600, swr: 1800 });
   } catch (e) {
     return c.json({ error: String(e) }, 502);
   }
@@ -129,7 +130,7 @@ app.get("/api/:source/watch/:slug/:ep", async (c) => {
   if (!src) return c.json({ error: "unknown source" }, 404);
   try {
     const data = await src.watch(c.req.param("slug"), c.req.param("ep"));
-    return c.json({ data });
+    return jsonNoStore(c, { data });
   } catch (e) {
     return c.json({ error: String(e) }, errorStatus(e));
   }
