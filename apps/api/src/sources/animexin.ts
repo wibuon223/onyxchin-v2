@@ -1,4 +1,5 @@
 import { upgradeDailymotionSources } from "../lib/dailymotion.js";
+import { distinctRows } from "../lib/home.js";
 import { load, type CheerioAPI } from "cheerio";
 import type {
   Anime,
@@ -429,6 +430,35 @@ function genreSlug(raw?: string): string | null {
   return slug || null;
 }
 
+/**
+ * Homepage widgets (`.wpop-weekly li`, `.series-gen article`) don't use the
+ * `.bsx` card markup, so they need a looser parser.
+ */
+function widgetCards($: CheerioAPI, selector: string): Card[] {
+  const out: Card[] = [];
+  const seen = new Set<string>();
+  $(selector).each((_, el) => {
+    const $el = $(el);
+    const link = $el.find('a[href*="/anime/"]').first();
+    const slug = slugOf(link.attr("href"));
+    if (!slug || seen.has(slug)) return;
+    const title =
+      clean(link.attr("title")) ||
+      clean($el.find("h4, h3, h2, .tt").first().text()) ||
+      clean(link.text());
+    if (!title) return;
+    const img = $el.find("img").first();
+    seen.add(slug);
+    out.push({
+      id: slug,
+      slug,
+      title,
+      poster: poster(img.attr("src") ?? img.attr("data-src") ?? img.attr("data-lazy-src")),
+    });
+  });
+  return out;
+}
+
 async function fetchSeriesPage(url: string): Promise<{ items: Card[]; hasNext: boolean }> {
   const $ = load(await fetchText(url, { referer: REFERER }));
   return { items: cardList($, ".listupd article.bs"), hasNext: $(".hpage a.r").length > 0 };
@@ -441,32 +471,25 @@ export const animexin: SourceAdapter = {
   lang: "id",
 
   async home(): Promise<HomePayload> {
-    const [latest, popular, action, fantasy, adventure, martial] = await Promise.allSettled([
-      fetchSeriesPage(listUrl(1, undefined, undefined, "update")),
-      fetchSeriesPage(listUrl(1, undefined, undefined, "popular")),
-      fetchSeriesPage(genrePageUrl("action", 1)),
-      fetchSeriesPage(genrePageUrl("fantasy", 1)),
-      fetchSeriesPage(genrePageUrl("adventure", 1)),
-      fetchSeriesPage(genrePageUrl("martial-arts", 1)),
+    const [homeDoc, latest, second] = await Promise.allSettled([
+      fetchText(`${BASE}/`, { referer: REFERER }),
+      fetchSeriesPage(`${BASE}/anime/`),
+      fetchSeriesPage(`${BASE}/anime/page/2/`),
     ]);
-    const take = (r: PromiseSettledResult<{ items: Card[] }>): Card[] =>
-      r.status === "fulfilled" ? r.value.items.slice(0, 20) : [];
 
-    const latestItems = take(latest);
-    const popularItems = take(popular);
-    const hero = (latestItems.length ? latestItems : popularItems).slice(0, 6);
+    const $home = homeDoc.status === "fulfilled" ? load(homeDoc.value) : null;
+    const latestItems = latest.status === "fulfilled" ? latest.value.items.slice(0, 20) : [];
+    const olderItems = second.status === "fulfilled" ? second.value.items.slice(0, 20) : [];
+    const popular = $home ? widgetCards($home, ".wpop-weekly li, .wpop-alltime li").slice(0, 20) : [];
+    const recommended = $home ? widgetCards($home, ".series-gen .tab-pane article").slice(0, 20) : [];
 
-    const rows: [string, Card[]][] = [
+    const hero = (latestItems.length ? latestItems : popular).slice(0, 6);
+    const sections = distinctRows([
       ["Terbaru", latestItems],
-      ["Populer", popularItems],
-      ["Action", take(action)],
-      ["Fantasy", take(fantasy)],
-      ["Adventure", take(adventure)],
-      ["Martial Arts", take(martial)],
-    ];
-    const sections: HomePayload["sections"] = rows
-      .filter(([, items]) => items.length > 0)
-      .map(([title, items]) => ({ title, items, href: `/api/animexin/list?page=1&genre=${encodeURIComponent(title)}` }));
+      ["Populer", popular],
+      ["Rekomendasi", recommended],
+      ["Arsip Lainnya", olderItems],
+    ]);
 
     return { hero, sections };
   },

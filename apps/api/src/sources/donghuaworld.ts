@@ -1,4 +1,5 @@
 import { upgradeDailymotionSources } from "../lib/dailymotion.js";
+import { distinctRows } from "../lib/home.js";
 import { load, type Cheerio, type CheerioAPI } from "cheerio";
 import type { Element } from "domhandler";
 import type {
@@ -402,37 +403,30 @@ export const donghuaworld: SourceAdapter = {
 
 
   async home(): Promise<HomePayload> {
-    const [homePage, action, fantasy, adventure, martial] = await Promise.allSettled([
+    const [homePage, ongoing, completed] = await Promise.allSettled([
       getDoc(`${BASE}/`),
-      getDoc(genrePageUrl("action", 1)),
-      getDoc(genrePageUrl("fantasy", 1)),
-      getDoc(genrePageUrl("adventure", 1)),
-      getDoc(genrePageUrl("martial-arts", 1)),
+      getDoc(`${BASE}/anime/?status=ongoing`),
+      getDoc(`${BASE}/anime/?status=completed`),
     ]);
 
     const $ = homePage.status === "fulfilled" ? homePage.value : null;
     const latest = $ ? parseCards($, $(".listupd.normal article")).slice(0, 20) : [];
     const hero = $ ? parseCards($, $(".popconslide article, .listupd.normal article")).slice(0, 6) : [];
-    const popular = $ ? mergeUnique(parseCards($, $(".wpop-weekly li")), parseCards($, $(".wpop-alltime li"))) : [];
+    const weekly = $ ? parseCards($, $(".wpop-weekly li")) : [];
+    const allTime = $ ? parseCards($, $(".wpop-alltime li")) : [];
+    const recommended = $ ? parseCards($, $(".series-gen .tab-pane").first().find("article")) : [];
 
-    const genreRow = (r: PromiseSettledResult<CheerioAPI>): Card[] =>
+    const statusRow = (r: PromiseSettledResult<CheerioAPI>): Card[] =>
       r.status === "fulfilled" ? parseCards(r.value, r.value(".listupd .bsx")).slice(0, 20) : [];
 
-    const rows: [string, Card[]][] = [
+    const sections = distinctRows([
       ["Terbaru", latest],
-      ["Populer", popular.slice(0, 20)],
-      ["Action", genreRow(action)],
-      ["Fantasy", genreRow(fantasy)],
-      ["Adventure", genreRow(adventure)],
-      ["Martial Arts", genreRow(martial)],
-    ];
-    const sections: HomePayload["sections"] = rows
-      .filter(([, items]) => items.length > 0)
-      .map(([title, items]) => ({
-        title,
-        items,
-        href: `/api/donghuaworld/list?page=1&genre=${encodeURIComponent(title)}`,
-      }));
+      ["Populer Minggu Ini", weekly],
+      ["All-Time Populer", allTime],
+      ["Rekomendasi", recommended],
+      ["Sedang Tayang", statusRow(ongoing)],
+      ["Selesai", statusRow(completed)],
+    ]);
 
     return { hero, sections };
   },

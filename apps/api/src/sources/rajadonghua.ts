@@ -11,6 +11,7 @@ import type {
   WatchPayload,
 } from "@onyxchin/shared";
 import { HttpError, absolute, fetchJson } from "../lib/http.js";
+import { distinctRows } from "../lib/home.js";
 
 const BASE_URL = "https://rajadonghua.com";
 const API_BASE = `${BASE_URL}/api/v1`;
@@ -426,13 +427,10 @@ async function home(): Promise<HomePayload> {
     ["Populer", popular],
     ...HOME_GENRES.map((genre, offset): [string, Card[]] => [genre, cardsOf(genreResults[offset])]),
   ];
-  const sections: HomePayload["sections"] = rows
-    .filter(([, items]) => items.length > 0)
-    .map(([title, items]) => ({
-      title,
-      items,
-      href: `/api/rajadonghua/list?page=1&genre=${encodeURIComponent(title)}`,
-    }));
+  const sections = distinctRows(rows).map((section) => ({
+    ...section,
+    href: section.title === "Terbaru" ? "/api/rajadonghua/list?page=1" : `/api/rajadonghua/list?page=1&genre=${encodeURIComponent(section.title)}`,
+  }));
 
   return { hero, sections };
 }

@@ -1,4 +1,5 @@
 import { upgradeDailymotionSources } from "../lib/dailymotion.js";
+import { distinctRows } from "../lib/home.js";
 import * as cheerio from "cheerio";
 import type {
   Anime,
@@ -320,13 +321,13 @@ export const anichin: SourceAdapter = {
       ["Adventure", genreRow(adventureResult)],
       ["Martial Arts", genreRow(martialResult)],
     ];
-    const sections: HomePayload["sections"] = rows
-      .filter(([, items]) => items.length > 0)
-      .map(([title, items]) => ({
-        title,
-        items,
-        href: `/api/anichin/list?page=1&genre=${encodeURIComponent(title)}`,
-      }));
+    const sections = distinctRows(rows).map((section) => ({
+      ...section,
+      href:
+        section.title === "Terbaru"
+          ? "/api/anichin/list?page=1"
+          : `/api/anichin/list?page=1&genre=${encodeURIComponent(section.title)}`,
+    }));
 
     const hero = latest.slice(0, 6);
     return { hero, sections };
