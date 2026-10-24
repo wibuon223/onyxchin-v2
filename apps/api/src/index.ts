@@ -77,7 +77,7 @@ app.get("/api/sub", proxySubtitle);
 
 app.get("/api/sync/:code", async (c) => {
   if (!syncAvailable()) return c.json({ error: "sync_disabled" }, 503);
-  const code = c.req.param("code").toLowerCase();
+  const code = c.req.param("code").toLowerCase().replace(/[^a-z0-9]/g, "");
   if (!isValidCode(code)) return c.json({ error: "invalid_code" }, 400);
   try {
     const snapshot = await readSync(code);
@@ -90,7 +90,7 @@ app.get("/api/sync/:code", async (c) => {
 
 app.put("/api/sync/:code", async (c) => {
   if (!syncAvailable()) return c.json({ error: "sync_disabled" }, 503);
-  const code = c.req.param("code").toLowerCase();
+  const code = c.req.param("code").toLowerCase().replace(/[^a-z0-9]/g, "");
   if (!isValidCode(code)) return c.json({ error: "invalid_code" }, 400);
   let body: unknown;
   try {
