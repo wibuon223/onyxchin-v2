@@ -20,6 +20,6 @@ createRoot(root).render(
 // PWA: register the service worker in production builds only.
 if (import.meta.env.PROD && "serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+    navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).catch(() => undefined);
   });
 }
