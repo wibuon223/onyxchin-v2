@@ -2,6 +2,9 @@
 /**
  * Deploy OnyxChin to Render via REST API.
  *
+ * NOTE: Render's env-vars PUT replaces the whole list. When changing env vars
+ * outside this script, send every key every time or the others are dropped.
+ *
  *   RENDER_API_KEY=rnd_xxx node tools/deploy-render.mjs
  *
  * Creates (or updates) three services in the workspace:

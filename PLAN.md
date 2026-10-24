@@ -15,11 +15,22 @@
 
 Catatan produksi penting: **animexin.dev, yunshanid.site, donghuaworld.com memblokir IP datacenter Cloudflare (403) dari Render.**
 
-Rantai egress API sekarang tiga lapis, dipilih per host:
+### Dailymotion — bypass penuh (verified)
+
+`/player/metadata/video/<id>` balas 200 walau `private: true`, tapi CDN-nya (Fastly) menolak TLS non-browser **dan** token-nya terikat ke IP peminta. Solusinya:
+
+1. metadata + manifest + segmen semuanya lewat **dmf relay** (curl_cffi impersonate Chrome) → IP sama, TLS mirip Chrome.
+2. API menulis ulang playlist jadi `/api/hls/seg` (playlist bersarang ikut ditulis ulang).
+3. Player kita memutar HLS-nya sendiri — tanpa iframe, tanpa ads.
+
+Terbukti: `readyState 4`, durasi 837s, buffered penuh, currentTime jalan.
+
+### Rantai egress dokumen (empat lapis, dipilih per host)
 
 1. **direct** — rajadonghua, anichin (cepat, tanpa biaya)
 2. **proxy residential (Bright Data ISP)** — host yang di-wall Cloudflare; hanya host di `ONYX_PROXY_HOSTS` (default: animexin.dev, yunshanid.site, donghuaworld.com) + status 403/429/503
-3. **relay** — `ocf.empty.codes` (tunnel box rumah) lalu allorigins; hanya untuk host di `ONYX_RELAY_HOSTS`
+3. **relay** — `dmf.empty.codes` (curl_cffi, tunnel box rumah) lalu allorigins; hanya untuk host di `ONYX_RELAY_HOSTS`
+4. **cache** — home 5m / list 3m / search 5m / detail 10m (watch tidak pernah di-cache)
 
 Cek rute yang sedang dipakai kapan saja:
 
@@ -28,7 +39,10 @@ curl "https://onyxchin-api.onrender.com/api/diag?u=https%3A%2F%2Fyunshanid.site%
 # {"via":"proxy","ms":2845,"status":200,"bytes":198506,...}
 ```
 
-Env terkait: `ONYX_PROXY_URL`, `ONYX_PROXY_HOSTS`, `ONYX_RELAY_BASE`, `ONYX_RELAY_TOKEN`, `ONYX_RELAY_HOSTS`.
+Env terkait: `ONYX_PROXY_URL`, `ONYX_PROXY_HOSTS`, `ONYX_RELAY_BASE`, `ONYX_RELAY_TOKEN`, `ONYX_RELAY_HOSTS`,
+`ONYX_DM_RELAY`, `ONYX_DM_RELAY_TOKEN`.
+
+> Render pitfall: `PUT /v1/services/:id/env-vars` **mengganti seluruh daftar**, bukan merge. Kirim semua key setiap kali.
 Rate limit 429 di host direct di-retry sekali (450ms) sebelum menyerah — bukan langsung lempar ke proxy.
 
 ---
