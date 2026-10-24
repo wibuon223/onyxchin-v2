@@ -118,7 +118,16 @@ export async function proxyMedia(c: Context) {
     }
     headers.set("content-type", mediaType(decoded, upstreamType));
     headers.set("access-control-allow-origin", "*");
-    headers.set("cache-control", "public, max-age=3600");
+    // Only small HLS parts may be cached by a shared cache. Full episodes are
+    // signed and short-lived, and a 600 MB object in Cloudflare's cache just
+    // wastes bandwidth on the next token.
+    const path = decoded.split("?")[0].toLowerCase();
+    headers.set(
+      "cache-control",
+      path.endsWith(".ts") || path.endsWith(".m4s") || path.endsWith(".cmfv")
+        ? "public, max-age=3600"
+        : "private, max-age=300"
+    );
     // `dl=1` turns the same stream into a browser download (used by the watch page).
     if (c.req.query("dl")) {
       const name = (c.req.query("name") ?? "onyxchin-video.mp4").replace(/[^\w.\-]+/g, "_").slice(0, 120);
