@@ -15,7 +15,10 @@ export function jsonCached(
   const etag = `W/"${createHash("sha1").update(body).digest("base64url").slice(0, 16)}"`;
   const headers = {
     "content-type": "application/json; charset=utf-8",
-    "cache-control": `public, max-age=${opts.maxAge}, s-maxage=${opts.sMaxAge}, stale-while-revalidate=${opts.swr}`,
+    // s-maxage=0 keeps Cloudflare from pinning stale JSON at the edge: our own
+    // in-memory SWR cache already absorbs the load, and browsers still keep the
+    // payload for `maxAge`. Revalidation goes through the ETag (304, no body).
+    "cache-control": `public, max-age=${opts.maxAge}, s-maxage=0, must-revalidate`,
     etag,
     "access-control-allow-origin": "*",
   };
