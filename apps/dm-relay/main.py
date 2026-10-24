@@ -22,7 +22,10 @@ from curl_cffi import requests as creq
 TOKEN = os.environ.get("DM_RELAY_TOKEN", "")
 PORT = int(os.environ.get("PORT", "10000"))
 TIMEOUT = 40
-ALLOW = re.compile(r"(^|\.)(dailymotion\.com|dmcdn\.net|dm-event\.net)$", re.I)
+ALLOW = re.compile(
+    r"(^|\.)(dailymotion\.com|dmcdn\.net|dm-event\.net|animexin\.dev|yunshanid\.site|donghuaworld\.com|donghuaworld\.in|anichin\.my|rajadonghua\.com)$",
+    re.I,
+)
 UA = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"

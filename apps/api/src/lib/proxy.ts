@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { fetchRaw } from "./http.js";
+import { fetchDoc, fetchRaw } from "./http.js";
 
 const ALLOW = [
   "rajadonghua.com",
@@ -72,7 +72,7 @@ export async function proxyImage(c: Context) {
   if (!target) return c.json({ error: "missing url" }, 400);
   if (!hostAllowed(target)) return c.json({ error: "host not allowed" }, 403);
   try {
-    const res = await fetchRaw(target, { referer: new URL(target).origin + "/", timeoutMs: 25000 });
+    const res = await fetchDoc(target, { referer: new URL(target).origin + "/", timeoutMs: 20000 });
     const body = await res.arrayBuffer();
     const type = res.headers.get("content-type") ?? "image/jpeg";
     return new Response(body, {
