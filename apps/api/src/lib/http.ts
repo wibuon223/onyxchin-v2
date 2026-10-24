@@ -73,12 +73,10 @@ export async function fetchDocDetailed(
   if (hasProxy() && !proxyDisabled() && shouldProxy(url, lastError)) {
     // Rotating residential exits occasionally hang; one retry lands on a fresh
     // exit and usually succeeds.
-    for (let attempt = 0; attempt < 2; attempt++) {
-      try {
-        return done(await fetchViaProxy(url, opts), "proxy");
-      } catch {
-        markProxyFailure();
-      }
+    try {
+      return done(await fetchViaProxy(url, opts), "proxy");
+    } catch {
+      markProxyFailure();
     }
   }
   if (!relayAllowed(url) && !forceRelay) {
@@ -152,15 +150,17 @@ function getProxyAgent(): ProxyAgent {
 
 function markProxyFailure(): void {
   proxyFails += 1;
-  if (proxyFails >= 3) {
-    proxyCooldownUntil = Date.now() + 60_000;
+  if (proxyFails >= 2) {
+    // Bright Data sometimes stalls from Render's egress; skip it for a while and
+    // let the relay serve those hosts instead of making users wait.
+    proxyCooldownUntil = Date.now() + 300_000;
     proxyFails = 0;
   }
 }
 
 async function fetchViaProxy(url: string, opts: FetchOpts): Promise<Response> {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? 18000);
+  const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? 12000);
   try {
     const init = {
       method: opts.method ?? "GET",
