@@ -420,16 +420,19 @@ async function home(): Promise<HomePayload> {
   const hero = cardsOf(heroResult).slice(0, HOME_HERO_LIMIT);
   if (!hero.length) hero.push(...popular.slice(0, HOME_HERO_LIMIT));
 
-  const sections: HomePayload["sections"] = [];
-  if (popular.length) sections.push({ title: "Trending", items: popular });
-
   const latest = cardsOf(latestResult);
-  if (latest.length) sections.push({ title: "Terbaru", items: latest });
-
-  genreResults.forEach((result, offset) => {
-    const items = cardsOf(result);
-    if (items.length) sections.push({ title: HOME_GENRES[offset], items });
-  });
+  const rows: [string, Card[]][] = [
+    ["Terbaru", latest],
+    ["Populer", popular],
+    ...HOME_GENRES.map((genre, offset): [string, Card[]] => [genre, cardsOf(genreResults[offset])]),
+  ];
+  const sections: HomePayload["sections"] = rows
+    .filter(([, items]) => items.length > 0)
+    .map(([title, items]) => ({
+      title,
+      items,
+      href: `/api/rajadonghua/list?page=1&genre=${encodeURIComponent(title)}`,
+    }));
 
   return { hero, sections };
 }

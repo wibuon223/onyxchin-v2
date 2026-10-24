@@ -379,36 +379,73 @@ function genreSlug(raw?: string): string | null {
   return slug || null;
 }
 
+/** Genre listings live on /genres/<slug>/page/N/; ?genre[]= is ignored upstream. */
+function genrePageUrl(slug: string, page: number): string {
+  return page > 1 ? `${BASE}/genres/${slug}/page/${page}/` : `${BASE}/genres/${slug}/`;
+}
+
+function mergeUnique(first: Card[], second: Card[]): Card[] {
+  const seen = new Set<string>();
+  const out: Card[] = [];
+  for (const card of [...first, ...second]) {
+    if (seen.has(card.slug)) continue;
+    seen.add(card.slug);
+    out.push(card);
+  }
+  return out;
+}
 export const donghuaworld: SourceAdapter = {
   id: "donghuaworld",
   name: "Donghua World",
   baseUrl: BASE,
   lang: "id",
 
+
   async home(): Promise<HomePayload> {
-    const $ = await getDoc(`${BASE}/`);
-    const latest = parseCards($, $(".listupd.normal article"));
-    const hero = parseCards($, $(".popconslide article, .listupd.normal article")).slice(0, 6);
+    const [homePage, action, fantasy, adventure, martial] = await Promise.allSettled([
+      getDoc(`${BASE}/`),
+      getDoc(genrePageUrl("action", 1)),
+      getDoc(genrePageUrl("fantasy", 1)),
+      getDoc(genrePageUrl("adventure", 1)),
+      getDoc(genrePageUrl("martial-arts", 1)),
+    ]);
 
-    const tabTitle = tidy($(".series-gen .nav-tabs li").first().text());
-    const recommendation = parseCards($, $(".series-gen .tab-pane").first().find("article"));
+    const $ = homePage.status === "fulfilled" ? homePage.value : null;
+    const latest = $ ? parseCards($, $(".listupd.normal article")).slice(0, 20) : [];
+    const hero = $ ? parseCards($, $(".popconslide article, .listupd.normal article")).slice(0, 6) : [];
+    const popular = $ ? mergeUnique(parseCards($, $(".wpop-weekly li")), parseCards($, $(".wpop-alltime li"))) : [];
 
-    const sections = [
-      { title: "Latest Release", items: latest },
-      { title: "Popular This Week", items: parseCards($, $(".wpop-weekly li")) },
-      { title: "All-Time Popular", items: parseCards($, $(".wpop-alltime li")) },
-      { title: tabTitle ? `Recommendation · ${tabTitle}` : "Recommendation", items: recommendation },
-    ].filter((section) => section.items.length > 0);
+    const genreRow = (r: PromiseSettledResult<CheerioAPI>): Card[] =>
+      r.status === "fulfilled" ? parseCards(r.value, r.value(".listupd .bsx")).slice(0, 20) : [];
+
+    const rows: [string, Card[]][] = [
+      ["Terbaru", latest],
+      ["Populer", popular.slice(0, 20)],
+      ["Action", genreRow(action)],
+      ["Fantasy", genreRow(fantasy)],
+      ["Adventure", genreRow(adventure)],
+      ["Martial Arts", genreRow(martial)],
+    ];
+    const sections: HomePayload["sections"] = rows
+      .filter(([, items]) => items.length > 0)
+      .map(([title, items]) => ({
+        title,
+        items,
+        href: `/api/donghuaworld/list?page=1&genre=${encodeURIComponent(title)}`,
+      }));
 
     return { hero, sections };
   },
 
   async list(params): Promise<ListPayload> {
     const page = Number.isFinite(params.page) && params.page > 0 ? Math.floor(params.page) : 1;
-    const query = new URLSearchParams({ page: String(page) });
-
     const genre = genreSlug(params.genre);
-    if (genre) query.set("genre[]", genre);
+    if (genre) {
+      const $g = await getDoc(genrePageUrl(genre, page));
+      const items = parseCards($g, $g(".listupd .bsx"));
+      return { items, page, hasNext: items.length > 0 && $g(".hpage a.r").length > 0 };
+    }
+    const query = new URLSearchParams({ page: String(page) });
 
     const status = (params.status ?? "").toLowerCase();
     if (STATUS_WORDS[status]) query.set("status", status);

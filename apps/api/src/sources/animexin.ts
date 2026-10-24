@@ -414,6 +414,21 @@ function listUrl(page: number, genre?: string, status?: string, order?: string):
   return `${BASE}/anime/${query ? `?${query}` : ""}`;
 }
 
+/** Genre listings live on /genres/<slug>/page/N/ — the ?genre[]= query is ignored upstream. */
+function genrePageUrl(slug: string, page: number): string {
+  return page > 1 ? `${BASE}/genres/${slug}/page/${page}/` : `${BASE}/genres/${slug}/`;
+}
+
+function genreSlug(raw?: string): string | null {
+  const value = (raw ?? "").trim();
+  if (!value) return null;
+  const slug = value
+    .toLowerCase()
+    .replace(/[\s_]+/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
+  return slug || null;
+}
+
 async function fetchSeriesPage(url: string): Promise<{ items: Card[]; hasNext: boolean }> {
   const $ = load(await fetchText(url, { referer: REFERER }));
   return { items: cardList($, ".listupd article.bs"), hasNext: $(".hpage a.r").length > 0 };
@@ -426,45 +441,43 @@ export const animexin: SourceAdapter = {
   lang: "id",
 
   async home(): Promise<HomePayload> {
-    const [latest, popular, action, martial] = await Promise.allSettled([
+    const [latest, popular, action, fantasy, adventure, martial] = await Promise.allSettled([
       fetchSeriesPage(listUrl(1, undefined, undefined, "update")),
       fetchSeriesPage(listUrl(1, undefined, undefined, "popular")),
-      fetchSeriesPage(listUrl(1, "action")),
-      fetchSeriesPage(listUrl(1, "martial-arts")),
+      fetchSeriesPage(genrePageUrl("action", 1)),
+      fetchSeriesPage(genrePageUrl("fantasy", 1)),
+      fetchSeriesPage(genrePageUrl("adventure", 1)),
+      fetchSeriesPage(genrePageUrl("martial-arts", 1)),
     ]);
-    const take = (r: PromiseSettledResult<{ items: Card[] }>): Card[] => (r.status === "fulfilled" ? r.value.items : []);
+    const take = (r: PromiseSettledResult<{ items: Card[] }>): Card[] =>
+      r.status === "fulfilled" ? r.value.items.slice(0, 20) : [];
 
     const latestItems = take(latest);
     const popularItems = take(popular);
-    const actionItems = take(action);
-    const martialItems = take(martial);
-
     const hero = (latestItems.length ? latestItems : popularItems).slice(0, 6);
-    const sections: HomePayload["sections"] = [];
-    if (latestItems.length) {
-      sections.push({ title: "Baru Rilis", items: latestItems, href: `${BASE}/anime/?order=update` });
-    }
-    if (popularItems.length) {
-      sections.push({ title: "Populer", items: popularItems, href: `${BASE}/anime/?order=popular` });
-    }
-    if (actionItems.length) {
-      sections.push({ title: "Action", items: actionItems, href: `${BASE}/anime/?genre%5B%5D=action` });
-    }
-    if (martialItems.length) {
-      sections.push({
-        title: "Martial Arts",
-        items: martialItems,
-        href: `${BASE}/anime/?genre%5B%5D=martial-arts`,
-      });
-    }
+
+    const rows: [string, Card[]][] = [
+      ["Terbaru", latestItems],
+      ["Populer", popularItems],
+      ["Action", take(action)],
+      ["Fantasy", take(fantasy)],
+      ["Adventure", take(adventure)],
+      ["Martial Arts", take(martial)],
+    ];
+    const sections: HomePayload["sections"] = rows
+      .filter(([, items]) => items.length > 0)
+      .map(([title, items]) => ({ title, items, href: `/api/animexin/list?page=1&genre=${encodeURIComponent(title)}` }));
+
     return { hero, sections };
   },
 
   async list(params): Promise<ListPayload> {
     const page = Number.isFinite(params.page) && params.page > 0 ? Math.floor(params.page) : 1;
-    const { items, hasNext } = await fetchSeriesPage(
-      listUrl(page, params.genre?.trim(), params.status?.trim(), params.order?.trim()),
-    );
+    const slug = genreSlug(params.genre);
+    const url = slug
+      ? genrePageUrl(slug, page)
+      : listUrl(page, undefined, params.status?.trim(), params.order?.trim());
+    const { items, hasNext } = await fetchSeriesPage(url);
     return { items, page, hasNext };
   },
 

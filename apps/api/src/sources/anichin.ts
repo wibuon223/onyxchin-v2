@@ -289,47 +289,47 @@ export const anichin: SourceAdapter = {
   lang: "id",
 
   async home(): Promise<HomePayload> {
-    const [homeResult, actionResult, fantasyResult] = await Promise.allSettled([
+    const [homeResult, actionResult, fantasyResult, adventureResult, martialResult] = await Promise.allSettled([
       page(`${BASE}/`),
       page(`${BASE}/genres/action/`),
       page(`${BASE}/genres/fantasy/`),
+      page(`${BASE}/genres/adventure/`),
+      page(`${BASE}/genres/martial-arts/`),
     ]);
     if (homeResult.status === "rejected") throw homeResult.reason;
 
     const $ = cheerio.load(homeResult.value);
-    const latest = cardsFrom($, "div.bixbox:has(.releases.latesthome) .listupd article.bs");
+    const latest = cardsFrom($, "div.bixbox:has(.releases.latesthome) .listupd article.bs").slice(0, 20);
     let popular = cardsFrom($, ".listupd.popularslider article.bs");
-    if (popular.length === 0) {
+    if (popular.length < 10) {
       try {
-        popular = cardsFrom(cheerio.load(await page(`${BASE}/series/?order=popular`)), ".listupd article.bs", 6);
+        popular = cardsFrom(cheerio.load(await page(`${BASE}/series/?order=popular`)), ".listupd article.bs", 20);
       } catch {
-        popular = [];
+        popular = popular;
       }
     }
 
-    const sections: HomePayload["sections"] = [
-      { title: "Update Terbaru", items: latest, href: "/api/anichin/list?page=1" },
-      { title: "Populer", items: popular, href: "/api/anichin/list?order=popular" },
-    ];
-    if (actionResult.status === "fulfilled") {
-      sections.push({
-        title: "Action",
-        items: cardsFrom(cheerio.load(actionResult.value), ".listupd article.bs"),
-        href: "/api/anichin/list?genre=action",
-      });
-    }
-    if (fantasyResult.status === "fulfilled") {
-      sections.push({
-        title: "Fantasy",
-        items: cardsFrom(cheerio.load(fantasyResult.value), ".listupd article.bs"),
-        href: "/api/anichin/list?genre=fantasy",
-      });
-    }
+    const genreRow = (r: PromiseSettledResult<string>): Card[] =>
+      r.status === "fulfilled" ? cardsFrom(cheerio.load(r.value), ".listupd article.bs").slice(0, 20) : [];
 
-    return {
-      hero: latest.slice(0, 6),
-      sections: sections.filter((section) => section.items.length > 0),
-    };
+    const rows: [string, Card[]][] = [
+      ["Terbaru", latest],
+      ["Populer", popular.slice(0, 20)],
+      ["Action", genreRow(actionResult)],
+      ["Fantasy", genreRow(fantasyResult)],
+      ["Adventure", genreRow(adventureResult)],
+      ["Martial Arts", genreRow(martialResult)],
+    ];
+    const sections: HomePayload["sections"] = rows
+      .filter(([, items]) => items.length > 0)
+      .map(([title, items]) => ({
+        title,
+        items,
+        href: `/api/anichin/list?page=1&genre=${encodeURIComponent(title)}`,
+      }));
+
+    const hero = latest.slice(0, 6);
+    return { hero, sections };
   },
 
   async list({ page: pageNo, genre, status, order }): Promise<ListPayload> {
