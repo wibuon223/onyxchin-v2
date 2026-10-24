@@ -14,7 +14,22 @@
 | Repo | https://github.com/wibuon223/onyxchin-v2 | public |
 
 Catatan produksi penting: **animexin.dev, yunshanid.site, donghuaworld.com memblokir IP datacenter Cloudflare (403) dari Render.**
-API sekarang fallback otomatis ke relay (`ocf.empty.codes`, tunnel ke box rumah) untuk host tersebut; kalau relay mati, jatuh ke proxy publik (allorigins). Rajadonghua & anichin tetap direct.
+
+Rantai egress API sekarang tiga lapis, dipilih per host:
+
+1. **direct** — rajadonghua, anichin (cepat, tanpa biaya)
+2. **proxy residential (Bright Data ISP)** — host yang di-wall Cloudflare; hanya host di `ONYX_PROXY_HOSTS` (default: animexin.dev, yunshanid.site, donghuaworld.com) + status 403/429/503
+3. **relay** — `ocf.empty.codes` (tunnel box rumah) lalu allorigins; hanya untuk host di `ONYX_RELAY_HOSTS`
+
+Cek rute yang sedang dipakai kapan saja:
+
+```bash
+curl "https://onyxchin-api.onrender.com/api/diag?u=https%3A%2F%2Fyunshanid.site%2F"
+# {"via":"proxy","ms":2845,"status":200,"bytes":198506,...}
+```
+
+Env terkait: `ONYX_PROXY_URL`, `ONYX_PROXY_HOSTS`, `ONYX_RELAY_BASE`, `ONYX_RELAY_TOKEN`, `ONYX_RELAY_HOSTS`.
+Rate limit 429 di host direct di-retry sekali (450ms) sebelum menyerah — bukan langsung lempar ke proxy.
 
 ---
 
