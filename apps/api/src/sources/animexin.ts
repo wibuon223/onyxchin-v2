@@ -269,7 +269,7 @@ interface HostRule {
 
 const HOST_RULES: HostRule[] = [
   {
-    test: /(^|\.)(do+od\.(to|so|watch|li|pm|sh|ws|com)|playmogo\.com|doodstream|doodapi|ds2play)/i,
+    test: /(^|\.)(do+od\.[a-z]{2,6}|playmogo\.com|doodstream|doodapi|ds2play\.[a-z]{2,6})$/i,
     name: "DoodStream",
     kind: "iframe",
     playable: false,

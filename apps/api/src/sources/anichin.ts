@@ -33,7 +33,7 @@ const PUBLIC_IMAGE_HOSTS = [
 const DOWNLOAD_HOSTS = ["mega.nz", "mega.co.nz", "pixeldrain", "drive.google.com", "mediafire", "mitedrive", "buzzheavier", "qiwi"];
 
 /** DoodStream family: reachable, but refuses embeds on unknown domains. */
-const DOOD_HOSTS = /(^|\.)(do+od\.(to|so|watch|li|pm|sh|ws|com)|playmogo\.com|doodstream|doodapi|ds2play)/i;
+const DOOD_HOSTS = /(^|\.)(do+od\.[a-z]{2,6}|playmogo\.com|doodstream|doodapi|ds2play\.[a-z]{2,6})$/i;
 /** Mirrors whose TLS handshake no longer completes (verified 2026-10-24). */
 const DEAD_HOSTS = /(^|\.)(ahvsh\.com|sblona\.com|vanfem\.com|fembed\.com|femax\d*\.com|fvd\d*\.com)$/i;
 
