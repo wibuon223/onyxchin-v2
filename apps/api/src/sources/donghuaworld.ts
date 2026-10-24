@@ -395,6 +395,19 @@ function mergeUnique(first: Card[], second: Card[]): Card[] {
   }
   return out;
 }
+/** Cards from the homepage widget whose heading contains `needle`. */
+function sectionCards($: CheerioAPI, needle: string): Card[] {
+  let best: Card[] = [];
+  $("h2,h3").each((_, el) => {
+    const text = tidy($(el).text());
+    if (!text.includes(needle)) return;
+    const box = $(el).closest(".bixbox, .section, .releases").parent();
+    const cards = parseCards($, box.find(".listupd article, .listupd .bsx"));
+    if (cards.length > best.length) best = cards;
+  });
+  return best.slice(0, 24);
+}
+
 export const donghuaworld: SourceAdapter = {
   id: "donghuaworld",
   name: "Donghua World",
@@ -410,20 +423,22 @@ export const donghuaworld: SourceAdapter = {
     ]);
 
     const $ = homePage.status === "fulfilled" ? homePage.value : null;
-    const latest = $ ? parseCards($, $(".listupd.normal article")).slice(0, 20) : [];
+    const seriesUpdate = $ ? sectionCards($, "Series Update") : [];
+    const latest = $ ? sectionCards($, "Latest Release") : [];
+    const recommended = $ ? sectionCards($, "Recommendation") : [];
     const hero = $ ? parseCards($, $(".popconslide article, .listupd.normal article")).slice(0, 6) : [];
     const weekly = $ ? parseCards($, $(".wpop-weekly li")) : [];
     const allTime = $ ? parseCards($, $(".wpop-alltime li")) : [];
-    const recommended = $ ? parseCards($, $(".series-gen .tab-pane").first().find("article")) : [];
 
     const statusRow = (r: PromiseSettledResult<CheerioAPI>): Card[] =>
       r.status === "fulfilled" ? parseCards(r.value, r.value(".listupd .bsx")).slice(0, 20) : [];
 
     const sections = distinctRows([
-      ["Terbaru", latest],
+      ["Series Update", seriesUpdate],
+      ["Latest Release", latest],
+      ["Recommendation", recommended],
       ["Populer Minggu Ini", weekly],
       ["All-Time Populer", allTime],
-      ["Rekomendasi", recommended],
       ["Sedang Tayang", statusRow(ongoing)],
       ["Selesai", statusRow(completed)],
     ]);

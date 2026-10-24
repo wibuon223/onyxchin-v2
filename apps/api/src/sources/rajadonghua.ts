@@ -408,10 +408,11 @@ function cardsOf(result: PromiseSettledResult<Card[]>): Card[] {
 }
 
 async function home(): Promise<HomePayload> {
-  const [heroResult, trendingResult, latestResult, ...genreResults] = await settleInWaves<Card[]>([
+  const [heroResult, trendingResult, latestResult, ratingResult, ...genreResults] = await settleInWaves<Card[]>([
     () => fetchCards({ limit: HOME_HERO_LIMIT, page: 1, sort: "popular" }),
     () => fetchCards({ limit: HOME_SECTION_LIMIT, page: 1, sort: "popular" }),
     () => fetchCards({ limit: HOME_SECTION_LIMIT, page: 1, sort: "latest" }),
+    () => fetchCards({ limit: HOME_SECTION_LIMIT, page: 1, sort: "rating" }),
     // sort=rating keeps genre rows distinct from Terbaru/Populer; with sort=popular
     // the upstream returns the same top titles for every genre.
     ...HOME_GENRES.map((genre) => () =>
@@ -427,6 +428,7 @@ async function home(): Promise<HomePayload> {
   const rows: [string, Card[]][] = [
     ["Terbaru", latest],
     ["Populer", popular],
+    ["Rating Tertinggi", cardsOf(ratingResult)],
     ...HOME_GENRES.map((genre, offset): [string, Card[]] => [genre, cardsOf(genreResults[offset])]),
   ];
   const sections = distinctRows(rows).map((section) => ({

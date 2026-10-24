@@ -283,6 +283,20 @@ async function loadSeriesFor(slugInput: string): Promise<SeriesPage> {
   return loadSeries(await seriesSlugFromPost(slug));
 }
 
+/** Cards from a homepage widget identified by its heading text. */
+function sectionCards($: cheerio.CheerioAPI, needle: string, tag: string): Card[] {
+  let best: Card[] = [];
+  $("h2,h3").each((_, el) => {
+    const text = squash($(el).text());
+    if (!text.includes(needle)) return;
+    const box = $(el).closest(".bixbox, .section, .releases").parent();
+    box.attr("data-onyx-sec", tag);
+    const cards = cardsFrom($, `[data-onyx-sec="${tag}"] .listupd article.bs`);
+    if (cards.length > best.length) best = cards;
+  });
+  return best.slice(0, 20);
+}
+
 export const anichin: SourceAdapter = {
   id: "anichin",
   name: "Anichin",
@@ -300,7 +314,9 @@ export const anichin: SourceAdapter = {
     if (homeResult.status === "rejected") throw homeResult.reason;
 
     const $ = cheerio.load(homeResult.value);
-    const latest = cardsFrom($, "div.bixbox:has(.releases.latesthome) .listupd article.bs").slice(0, 20);
+    const popularToday = sectionCards($, "Terpopuler Hari Ini", "pop-today");
+    const latest = sectionCards($, "Rilisan Terbaru", "latest");
+    const recommended = sectionCards($, "Rekomendasi", "recommended");
     let popular = cardsFrom($, ".listupd.popularslider article.bs");
     if (popular.length < 10) {
       try {
@@ -314,8 +330,9 @@ export const anichin: SourceAdapter = {
       r.status === "fulfilled" ? cardsFrom(cheerio.load(r.value), ".listupd article.bs").slice(0, 20) : [];
 
     const rows: [string, Card[]][] = [
-      ["Terbaru", latest],
-      ["Populer", popular.slice(0, 20)],
+      ["Terpopuler Hari Ini", popularToday.length ? popularToday : popular.slice(0, 20)],
+      ["Rilisan Terbaru", latest],
+      ["Rekomendasi", recommended],
       ["Action", genreRow(actionResult)],
       ["Fantasy", genreRow(fantasyResult)],
       ["Adventure", genreRow(adventureResult)],
