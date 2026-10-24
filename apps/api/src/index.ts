@@ -67,7 +67,7 @@ app.get("/api/:source/home", async (c) => {
   const src = pick(c.req.param("source"));
   if (!src) return c.json({ error: "unknown source" }, 404);
   try {
-    const data = await cached(`${src.id}:home`, 90_000, () => src.home());
+    const data = await cached(`${src.id}:home`, 300_000, () => src.home());
     return c.json({ data });
   } catch (e) {
     return c.json({ error: String(e) }, 502);
@@ -82,7 +82,7 @@ app.get("/api/:source/list", async (c) => {
     const genre = c.req.query("genre") || undefined;
     const status = c.req.query("status") || undefined;
     const order = c.req.query("order") || undefined;
-    const data = await cached(`${src.id}:list:${page}:${genre ?? ""}:${status ?? ""}:${order ?? ""}`, 60_000, () =>
+    const data = await cached(`${src.id}:list:${page}:${genre ?? ""}:${status ?? ""}:${order ?? ""}`, 180_000, () =>
       src.list({ page, genre, status, order })
     );
     return c.json({ data });
@@ -97,7 +97,7 @@ app.get("/api/:source/search", async (c) => {
   const q = (c.req.query("q") ?? "").trim();
   if (!q) return c.json({ data: [] });
   try {
-    const data = await cached(`${src.id}:search:${q.toLowerCase()}`, 120_000, () => src.search(q));
+    const data = await cached(`${src.id}:search:${q.toLowerCase()}`, 300_000, () => src.search(q));
     return c.json({ data });
   } catch (e) {
     return c.json({ error: String(e) }, 502);
@@ -109,7 +109,7 @@ app.get("/api/:source/anime/:slug", async (c) => {
   if (!src) return c.json({ error: "unknown source" }, 404);
   try {
     const slug = c.req.param("slug");
-    const data = await cached(`${src.id}:detail:${slug}`, 120_000, () => src.detail(slug));
+    const data = await cached(`${src.id}:detail:${slug}`, 600_000, () => src.detail(slug));
     return c.json({ data });
   } catch (e) {
     return c.json({ error: String(e) }, 502);

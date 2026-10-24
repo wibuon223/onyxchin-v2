@@ -71,10 +71,14 @@ export async function fetchDocDetailed(
     }
   }
   if (hasProxy() && !proxyDisabled() && shouldProxy(url, lastError)) {
-    try {
-      return done(await fetchViaProxy(url, opts), "proxy");
-    } catch {
-      markProxyFailure();
+    // Rotating residential exits occasionally hang; one retry lands on a fresh
+    // exit and usually succeeds.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        return done(await fetchViaProxy(url, opts), "proxy");
+      } catch {
+        markProxyFailure();
+      }
     }
   }
   if (!relayAllowed(url) && !forceRelay) {
@@ -156,7 +160,7 @@ function markProxyFailure(): void {
 
 async function fetchViaProxy(url: string, opts: FetchOpts): Promise<Response> {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? 25000);
+  const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? 18000);
   try {
     const init = {
       method: opts.method ?? "GET",
