@@ -148,6 +148,10 @@ export async function writeSync(code: string, incoming: SyncEntry[]): Promise<Sy
   await ensureSchema();
   const existing = await readSync(code);
   const merged = mergeEntries(existing?.entries ?? [], incoming);
+  if (!existing && merged.length === 0) {
+    // Nothing to store: don't create empty rows for random codes.
+    return { entries: [], updatedAt: new Date().toISOString() };
+  }
   const result = await getPool().query<{ updated_at: Date }>(
     `insert into watch_sync (code, entries, updated_at)
      values ($1, $2::jsonb, now())

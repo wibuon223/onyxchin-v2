@@ -89,7 +89,27 @@ app.get("/api/sync/:code", async (c) => {
   }
 });
 
+const SYNC_WRITE_WINDOW_MS = 60_000;
+const SYNC_WRITE_LIMIT = 30;
+const syncWrites = new Map<string, { count: number; resetAt: number }>();
+
+function syncWriteAllowed(ip: string): boolean {
+  const now = Date.now();
+  const bucket = syncWrites.get(ip);
+  if (!bucket || bucket.resetAt <= now) {
+    syncWrites.set(ip, { count: 1, resetAt: now + SYNC_WRITE_WINDOW_MS });
+    if (syncWrites.size > 500) {
+      for (const [key, value] of syncWrites) if (value.resetAt <= now) syncWrites.delete(key);
+    }
+    return true;
+  }
+  bucket.count += 1;
+  return bucket.count <= SYNC_WRITE_LIMIT;
+}
+
 app.put("/api/sync/:code", async (c) => {
+  const ip = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  if (!syncWriteAllowed(ip)) return c.json({ error: "rate_limited" }, 429);
   if (!syncAvailable()) return c.json({ error: "sync_disabled" }, 503);
   const code = c.req.param("code").toLowerCase().replace(/[^a-z0-9]/g, "");
   if (!isValidCode(code)) return c.json({ error: "invalid_code" }, 400);
