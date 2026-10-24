@@ -1,3 +1,5 @@
+import { ProxyAgent, fetch as undiciFetch } from "undici";
+
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
@@ -25,8 +27,16 @@ export async function fetchJson<T = unknown>(url: string, opts: FetchOpts = {}):
   return (await res.json()) as T;
 }
 
-/** Direct request first; on a bot-wall status fall back to a relay. */
+/**
+ * Direct request first. If the host bot-walls us (Cloudflare 403 on datacenter
+ * IPs), retry through the residential proxy, then through a relay as last resort.
+ *
+ *   ONYX_PROXY_URL=http://user:pass@brd.superproxy.io:44445
+ */
 export async function fetchDoc(url: string, opts: FetchOpts = {}): Promise<Response> {
+  if (process.env.ONYX_FORCE_PROXY === "1" && hasProxy()) {
+    return fetchViaProxy(url, opts);
+  }
   const forceRelay = process.env.ONYX_RELAY_ONLY === "1";
   if (!forceRelay) {
     try {
@@ -35,7 +45,70 @@ export async function fetchDoc(url: string, opts: FetchOpts = {}): Promise<Respo
       if (!isBlocked(err) || opts.method === "POST") throw err;
     }
   }
+  if (hasProxy() && !proxyDisabled()) {
+    try {
+      return await fetchViaProxy(url, opts);
+    } catch {
+      markProxyFailure();
+    }
+  }
   return fetchViaRelay(url, opts);
+}
+
+let proxyAgent: ProxyAgent | null = null;
+let proxyFails = 0;
+let proxyCooldownUntil = 0;
+
+function hasProxy(): boolean {
+  return Boolean(process.env.ONYX_PROXY_URL);
+}
+
+function proxyDisabled(): boolean {
+  return Date.now() < proxyCooldownUntil;
+}
+
+function getProxyAgent(): ProxyAgent {
+  if (!proxyAgent) {
+    proxyAgent = new ProxyAgent({ uri: process.env.ONYX_PROXY_URL as string });
+  }
+  return proxyAgent as ProxyAgent;
+}
+
+function markProxyFailure(): void {
+  proxyFails += 1;
+  if (proxyFails >= 3) {
+    proxyCooldownUntil = Date.now() + 60_000;
+    proxyFails = 0;
+  }
+}
+
+async function fetchViaProxy(url: string, opts: FetchOpts): Promise<Response> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? 25000);
+  try {
+    const init = {
+      method: opts.method ?? "GET",
+      body: opts.body,
+      signal: ctrl.signal,
+      redirect: "follow",
+      dispatcher: getProxyAgent(),
+      headers: {
+        "user-agent": UA,
+        accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "accept-language": "id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7",
+        ...(opts.referer ? { referer: opts.referer } : {}),
+        ...(opts.headers ?? {}),
+      },
+    } as RequestInit;
+    // Node's global fetch ignores undici's `dispatcher`; use undici's own fetch
+    // so the ProxyAgent actually carries the request.
+    const res = await undiciFetch(url, init as Parameters<typeof undiciFetch>[1]);
+    if (!res.ok) throw new HttpError(res.status, url);
+    proxyFails = 0;
+    return res as unknown as Response;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function isBlocked(err: unknown): boolean {
