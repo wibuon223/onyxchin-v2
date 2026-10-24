@@ -1,3 +1,4 @@
+import { upgradeDailymotionSources } from "../lib/dailymotion.js";
 import { load, type Cheerio, type CheerioAPI } from "cheerio";
 import type { Element } from "domhandler";
 import type {
@@ -451,7 +452,7 @@ export const donghuaworld: SourceAdapter = {
     return {
       anime: series.anime,
       episode: episodes[index],
-      sources: buildSources(embeds, episodePageUrl),
+      sources: await upgradeDailymotionSources(buildSources(embeds, episodePageUrl)),
       subtitles: [],
       prev: index > 0 ? episodes[index - 1] : undefined,
       next: index < episodes.length - 1 ? episodes[index + 1] : undefined,

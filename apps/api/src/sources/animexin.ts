@@ -1,3 +1,4 @@
+import { upgradeDailymotionSources } from "../lib/dailymotion.js";
 import { load, type CheerioAPI } from "cheerio";
 import type {
   Anime,
@@ -507,7 +508,7 @@ export const animexin: SourceAdapter = {
     return {
       anime: series.anime,
       episode: parseEpisode($, target),
-      sources: mirrorSources($, episodeUrl),
+      sources: await upgradeDailymotionSources(mirrorSources($, episodeUrl)),
       subtitles: [],
       prev: episodeFromHref($('.naveps a[rel="prev"]').attr("href"), series.episodes),
       next: episodeFromHref($('.naveps a[rel="next"]').attr("href"), series.episodes),

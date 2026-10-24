@@ -22,6 +22,7 @@
  *   VK Video, Abyss, RUBY. Downloads on the page duplicate those mirrors in a
  *   non-embeddable form, so they are not surfaced as sources.
  */
+import { upgradeDailymotionSources } from "../lib/dailymotion.js";
 import { load, type CheerioAPI } from "cheerio";
 import type {
   Anime,
@@ -815,7 +816,7 @@ async function watch(slug: string, episode: string): Promise<WatchPayload> {
   const payload: WatchPayload = {
     anime: toAnime(record, page?.synopsis),
     episode: toEpisode(number),
-    sources: await buildSources(servers),
+    sources: await upgradeDailymotionSources(await buildSources(servers)),
     subtitles: [],
   };
   if (prevNumber !== undefined) payload.prev = toEpisode(prevNumber);

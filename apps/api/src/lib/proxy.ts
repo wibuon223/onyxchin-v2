@@ -19,7 +19,42 @@ const ALLOW = [
   "i.postimg.cc",
   "img.youtube.com",
   "cdn.myanimelist.net",
+  "dailymotion.com",
+  "dmcdn.net",
 ];
+
+/** Hosts that reject non-browser TLS and must ride the curl_cffi relay. */
+const DM_HOSTS = /(^|\.)(dailymotion\.com|dmcdn\.net)$/i;
+
+/**
+ * Dailymotion's Fastly edge 403s curl/undici but 200s a Chrome handshake, so DM
+ * media is fetched through the dm-relay service (curl_cffi impersonation).
+ */
+async function fetchUpstream(
+  url: string,
+  opts: { referer: string; range?: string; timeoutMs?: number }
+): Promise<Response> {
+  let host = "";
+  try {
+    host = new URL(url).hostname;
+  } catch {
+    host = "";
+  }
+  const relay = process.env.ONYX_DM_RELAY;
+  if (relay && DM_HOSTS.test(host)) {
+    const target = `${relay.replace(/\/$/, "")}/fetch?u=${encodeURIComponent(url)}&ref=${encodeURIComponent(opts.referer)}`;
+    const headers: Record<string, string> = {};
+    if (opts.range) headers.range = opts.range;
+    if (process.env.ONYX_DM_RELAY_TOKEN) headers["x-relay-token"] = process.env.ONYX_DM_RELAY_TOKEN;
+    const res = await fetch(target, { headers, signal: AbortSignal.timeout(opts.timeoutMs ?? 40000) });
+    return res;
+  }
+  return fetchRaw(url, {
+    referer: opts.referer,
+    timeoutMs: opts.timeoutMs ?? 30000,
+    headers: opts.range ? { range: opts.range } : {},
+  });
+}
 
 function hostAllowed(url: string): boolean {
   try {
@@ -61,11 +96,7 @@ export async function proxyMedia(c: Context) {
   const range = c.req.header("range");
   const referer = c.req.query("ref") || new URL(decoded).origin + "/";
   try {
-    const res = await fetchRaw(decoded, {
-      referer,
-      timeoutMs: 30000,
-      headers: range ? { range } : {},
-    });
+    const res = await fetchUpstream(decoded, { referer, range, timeoutMs: 40000 });
     const headers = new Headers();
     const upstreamType = res.headers.get("content-type") ?? "";
     for (const h of ["content-length", "content-range", "accept-ranges", "etag", "last-modified"]) {
@@ -137,7 +168,8 @@ export async function proxyHls(c: Context) {
   if (!hostAllowed(decoded)) return c.json({ error: "host not allowed" }, 403);
   const base = new URL(decoded);
   try {
-    const res = await fetchRaw(decoded, { referer: base.origin + "/", timeoutMs: 25000 });
+    const dmReferer = c.req.query("ref") || base.origin + "/";
+    const res = await fetchUpstream(decoded, { referer: dmReferer, timeoutMs: 30000 });
     const text = await res.text();
     const out = text
       .split("\n")
@@ -145,9 +177,9 @@ export async function proxyHls(c: Context) {
         const l = line.trim();
         if (!l) return line;
         if (l.startsWith("#")) {
-          return line.replace(/URI="([^"]+)"/g, (_m, uri) => `URI="${segUrl(base, uri)}"`);
+          return line.replace(/URI="([^"]+)"/g, (_m, uri) => `URI="${segUrl(base, uri, dmReferer)}"`);
         }
-        return segUrl(base, l);
+        return segUrl(base, l, dmReferer);
       })
       .join("\n");
     return new Response(out, {
@@ -162,7 +194,8 @@ export async function proxyHls(c: Context) {
   }
 }
 
-function segUrl(base: URL, raw: string): string {
+function segUrl(base: URL, raw: string, referer?: string): string {
   const abs = new URL(raw, base).toString();
-  return `/api/hls/seg?u=${encodeURIComponent(abs)}`;
+  const ref = referer ? `&ref=${encodeURIComponent(referer)}` : "";
+  return `/api/hls/seg?u=${encodeURIComponent(abs)}${ref}`;
 }

@@ -1,3 +1,4 @@
+import { upgradeDailymotionSources } from "../lib/dailymotion.js";
 import * as cheerio from "cheerio";
 import type {
   Anime,
@@ -481,7 +482,7 @@ export const anichin: SourceAdapter = {
     return {
       anime,
       episode: episodeInfo,
-      sources,
+      sources: await upgradeDailymotionSources(sources),
       subtitles: [],
       ...(prev ? { prev } : {}),
       ...(next ? { next } : {}),
