@@ -83,8 +83,9 @@ app.get("/api/sync/:code", async (c) => {
     const snapshot = await readSync(code);
     if (!snapshot) return c.json({ error: "not_found" }, 404);
     return c.json({ code, ...snapshot });
-  } catch {
-    return c.json({ error: "sync_unavailable" }, 503);
+  } catch (error) {
+    console.error("[sync:get]", error);
+    return c.json({ error: "sync_unavailable", detail: String(error).slice(0, 180) }, 503);
   }
 });
 
@@ -106,7 +107,8 @@ app.put("/api/sync/:code", async (c) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     if (message === "payload_too_large") return c.json({ error: "payload_too_large" }, 413);
-    return c.json({ error: "sync_unavailable" }, 503);
+    console.error("[sync:put]", error);
+    return c.json({ error: "sync_unavailable", detail: String(error).slice(0, 180) }, 503);
   }
 });
 
