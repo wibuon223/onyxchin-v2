@@ -3,6 +3,19 @@
 > Multi-source donghua streaming. Satu API, satu web streaming, satu docs terpisah.
 > Target deploy: Render (workspace `My Workspace` / `tea-db808lgn74is73d9i8f0`).
 
+
+## 0. Live sekarang (deployed 24 Okt 2026)
+
+| Service | URL | Status |
+|---|---|---|
+| API | https://onyxchin-api.onrender.com | live (free plan, cold start ±30s) |
+| Web streaming | https://onyxchin-web.onrender.com | live |
+| API docs + playground | https://onyxchin-docs.onrender.com | live |
+| Repo | https://github.com/wibuon223/onyxchin-v2 | public |
+
+Catatan produksi penting: **animexin.dev, yunshanid.site, donghuaworld.com memblokir IP datacenter Cloudflare (403) dari Render.**
+API sekarang fallback otomatis ke relay (`ocf.empty.codes`, tunnel ke box rumah) untuk host tersebut; kalau relay mati, jatuh ke proxy publik (allorigins). Rajadonghua & anichin tetap direct.
+
 ---
 
 ## 1. Recon — hasil probe live (24 Okt 2026)

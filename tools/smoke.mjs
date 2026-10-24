@@ -37,7 +37,14 @@ for (const src of SOURCES) {
     row.detail = `${detail.status} · ${eps} eps · ${detail.ms}ms`;
     const ep = detail.body?.data?.episodes?.[0]?.slug ?? "1";
     if (eps > 0) {
-      const watch = await j(`/api/${src}/watch/${encodeURIComponent(detailSlug)}/${encodeURIComponent(ep)}`);
+      let watch = await j(`/api/${src}/watch/${encodeURIComponent(detailSlug)}/${encodeURIComponent(ep)}`);
+      // Some catalogues gate the newest title behind VIP; retry a couple of
+      // later cards before calling the source broken.
+      for (let i = 1; i < 3 && watch.status === 403; i++) {
+        const alt = list.body?.data?.items?.[i];
+        if (!alt) break;
+        watch = await j(`/api/${src}/watch/${encodeURIComponent(alt.slug)}/1`);
+      }
       const s = watch.body?.data?.sources ?? [];
       const playable = s.filter((x) => x.playable).length;
       row.watch = `${watch.status} · ${s.length} sources (${playable} playable) · ${watch.ms}ms`;
