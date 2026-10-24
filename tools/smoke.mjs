@@ -9,7 +9,10 @@ const SOURCES = ["rajadonghua", "anichin", "animexin", "yunshanid", "donghuaworl
 
 async function j(path) {
   const t0 = performance.now();
-  const res = await fetch(BASE + path, { headers: { accept: "application/json" } });
+  const res = await fetch(BASE + path, {
+    headers: { accept: "application/json" },
+    signal: AbortSignal.timeout(60_000),
+  }).catch((err) => ({ status: 0, json: async () => ({ error: String(err) }) }));
   const ms = Math.round(performance.now() - t0);
   const body = await res.json().catch(() => ({}));
   return { status: res.status, ms, body };

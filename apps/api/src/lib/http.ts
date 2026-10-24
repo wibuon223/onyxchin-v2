@@ -1,4 +1,5 @@
 import { ProxyAgent, fetch as undiciFetch } from "undici";
+import { proxyLimit, relayLimit } from "./limit.js";
 
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
@@ -203,6 +204,10 @@ function markProxyFailure(): void {
 }
 
 async function fetchViaProxy(url: string, opts: FetchOpts): Promise<Response> {
+  return proxyLimit.run(() => fetchViaProxyRaw(url, opts));
+}
+
+async function fetchViaProxyRaw(url: string, opts: FetchOpts): Promise<Response> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? 12000);
   try {
@@ -262,6 +267,10 @@ function relayChain(): Relay[] {
 }
 
 async function fetchViaRelay(url: string, opts: FetchOpts): Promise<Response> {
+  return relayLimit.run(() => fetchViaRelayRaw(url, opts));
+}
+
+async function fetchViaRelayRaw(url: string, opts: FetchOpts): Promise<Response> {
   let lastErr: unknown = new Error("relay unavailable");
   for (const relay of relayChain()) {
     const ctrl = new AbortController();

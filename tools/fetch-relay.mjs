@@ -26,6 +26,10 @@ function badHost(host) {
   return PRIVATE.test(host) || !host.includes(".");
 }
 
+const cache = new Map(); // url -> { status, type, body, expires }
+const CACHE_TTL = 60_000;
+const CACHE_MAX = 120;
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", `http://127.0.0.1:${PORT}`);
   if (url.pathname === "/health") {
@@ -54,6 +58,17 @@ const server = createServer(async (req, res) => {
     return;
   }
 
+  const cached = cache.get(parsed.toString());
+  if (cached && cached.expires > Date.now()) {
+    res.writeHead(cached.status, {
+      "content-type": cached.type,
+      "cache-control": "no-store",
+      "x-relay-cache": "hit",
+    });
+    res.end(cached.body);
+    return;
+  }
+
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   try {
@@ -72,8 +87,13 @@ const server = createServer(async (req, res) => {
       res.writeHead(502).end("too large");
       return;
     }
+    const type = upstream.headers.get("content-type") ?? "application/octet-stream";
+    if (upstream.status === 200 && buf.length < 1_500_000) {
+      if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value);
+      cache.set(parsed.toString(), { status: 200, type, body: buf, expires: Date.now() + CACHE_TTL });
+    }
     res.writeHead(upstream.status, {
-      "content-type": upstream.headers.get("content-type") ?? "application/octet-stream",
+      "content-type": type,
       "cache-control": "no-store",
       "x-relay-status": String(upstream.status),
     });
