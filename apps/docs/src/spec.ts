@@ -595,7 +595,7 @@ export const ENDPOINTS: EndpointSpec[] = [
       ],
     },
     notes: [
-      "Allowlist: rajadonghua.com, anichin.my, animexin.dev, yunshanid.site, donghuaworld.com, donghuaworld.in, wsrv.nl, i0–i3.wp.com, i.ibb.co, i.ibb.co.com, iili.io, i.postimg.cc, img.youtube.com, cdn.myanimelist.net.",
+      "Allowlist: rajadonghua.com, anichin.my, animexin.dev, donghuaworld.com, donghuaworld.in, wsrv.nl, i0–i3.wp.com, i.ibb.co, i.ibb.co.com, iili.io, i.postimg.cc, img.youtube.com, cdn.myanimelist.net.",
       "Public hosts (wsrv.nl, i.ibb.co, iili.io, i.postimg.cc) can be used directly, without the proxy.",
       "`403 host not allowed` means the URL is outside the allowlist — proxy it yourself or pick the upstream image.",
     ],
