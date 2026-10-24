@@ -59,6 +59,13 @@ YunshanID dibuang (banyak judul cuma punya 1 mirror). Sisa **4 sumber**, section
 
 Kartu episode (mis. `beyond-times-gaze-episode-45-…`) tetap bisa diklik karena `detail()` animexin menyelesaikan episode slug ke series induknya.
 
+
+### PWA
+
+`apps/web/public/` sekarang berisi `manifest.json`, `sw.js`, dan 3 ikon (192/512/maskable).
+Service worker: cache-first untuk shell & aset, network-first untuk JSON API dengan fallback cache, dan **tidak menyentuh** `/api/media`, `/api/hls`, `.ts/.m4s/.mp4` (video tetap langsung dari jaringan).
+Terbukti di production: 1 registrasi, scope `/`, `controller: true`, dan reload saat offline tetap menampilkan shell.
+
 ---
 
 ## 1. Recon — hasil probe live (24 Okt 2026)
