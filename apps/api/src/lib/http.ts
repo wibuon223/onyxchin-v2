@@ -40,15 +40,31 @@ export async function fetchDoc(url: string, opts: FetchOpts = {}): Promise<Respo
 export type FetchVia = "direct" | "proxy" | "relay";
 
 /** Same chain as fetchDoc but reports which route served the request (for /api/diag). */
+export interface FetchAttempt {
+  via: FetchVia;
+  ms: number;
+  error?: string;
+}
+
 export async function fetchDocDetailed(
   url: string,
   opts: FetchOpts = {}
-): Promise<{ res: Response; via: FetchVia; ms: number }> {
+): Promise<{ res: Response; via: FetchVia; ms: number; attempts: FetchAttempt[] }> {
   const t0 = Date.now();
-  const done = (res: Response, via: FetchVia) => ({ res, via, ms: Date.now() - t0 });
+  const attempts: FetchAttempt[] = [];
+  const mark = (via: FetchVia, error?: unknown) =>
+    attempts.push({ via, ms: Date.now() - t0, ...(error ? { error: String(error).slice(0, 120) } : {}) });
+  const done = (res: Response, via: FetchVia) => ({ res, via, ms: Date.now() - t0, attempts });
 
   if (process.env.ONYX_FORCE_PROXY === "1" && hasProxy()) {
-    return done(await fetchViaProxy(url, opts), "proxy");
+    try {
+      const res = await fetchViaProxy(url, opts);
+      mark("proxy");
+      return done(res, "proxy");
+    } catch (err) {
+      mark("proxy", err);
+      throw err;
+    }
   }
   const forceRelay = process.env.ONYX_RELAY_ONLY === "1";
   // Known bot-walled hosts never answer Render directly (Cloudflare stalls ~20s
@@ -57,8 +73,11 @@ export async function fetchDocDetailed(
   let lastError: unknown = null;
   if (!forceRelay && !knownBlocked) {
     try {
-      return done(await fetchRaw(url, opts), "direct");
+      const res = await fetchRaw(url, opts);
+      mark("direct");
+      return done(res, "direct");
     } catch (err) {
+      mark("direct", err);
       lastError = err;
       if (!isBlocked(err) || opts.method === "POST") throw err;
     }
@@ -77,15 +96,25 @@ export async function fetchDocDetailed(
     // Rotating residential exits occasionally hang; one retry lands on a fresh
     // exit and usually succeeds.
     try {
-      return done(await fetchViaProxy(url, opts), "proxy");
-    } catch {
+      const res = await fetchViaProxy(url, opts);
+      mark("proxy");
+      return done(res, "proxy");
+    } catch (err) {
+      mark("proxy", err);
       markProxyFailure();
     }
   }
   if (!relayAllowed(url) && !forceRelay) {
     throw lastError ?? new Error(`upstream blocked: ${url}`);
   }
-  return done(await fetchViaRelay(url, opts), "relay");
+  try {
+    const res = await fetchViaRelay(url, opts);
+    mark("relay");
+    return done(res, "relay");
+  } catch (err) {
+    mark("relay", err);
+    throw err;
+  }
 }
 
 function sleep(ms: number): Promise<void> {
