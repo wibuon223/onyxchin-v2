@@ -41,6 +41,31 @@ export function dailymotionId(url: string): string | null {
   }
 }
 
+
+/**
+ * Dailymotion binds the signed manifest token to the requesting IP. Metadata and
+ * media must therefore leave from the SAME egress, so both ride the dm relay
+ * (residential) whenever it is configured. Fetching metadata directly from the
+ * datacenter here yields manifests that 403 when the relay asks for them.
+ */
+async function fetchMetadata(id: string): Promise<DmMetadata> {
+  const relay = process.env.ONYX_DM_RELAY;
+  if (!relay) {
+    return fetchJson<DmMetadata>(`https://www.dailymotion.com/player/metadata/video/${id}`, {
+      referer: "https://www.dailymotion.com/",
+      headers: { origin: "https://www.dailymotion.com" },
+      timeoutMs: 15_000,
+    });
+  }
+  const target = `https://www.dailymotion.com/player/metadata/video/${id}`;
+  const url = `${relay.replace(/\/$/, "")}/fetch?u=${encodeURIComponent(target)}&ref=${encodeURIComponent("https://www.dailymotion.com/")}`;
+  const headers: Record<string, string> = { accept: "application/json" };
+  if (process.env.ONYX_DM_RELAY_TOKEN) headers["x-relay-token"] = process.env.ONYX_DM_RELAY_TOKEN;
+  const res = await fetch(url, { headers, signal: AbortSignal.timeout(20_000) });
+  if (!res.ok) throw new Error(`dm metadata ${res.status}`);
+  return (await res.json()) as DmMetadata;
+}
+
 interface DmMetadata {
   id?: string;
   title?: string;
@@ -57,11 +82,7 @@ export async function resolveDailymotion(url: string): Promise<DmResolved | null
   if (hit && hit.expires > Date.now()) return hit.value;
 
   try {
-    const meta = await fetchJson<DmMetadata>(`https://www.dailymotion.com/player/metadata/video/${id}`, {
-      referer: "https://www.dailymotion.com/",
-      headers: { origin: "https://www.dailymotion.com" },
-      timeoutMs: 15_000,
-    });
+    const meta = await fetchMetadata(id);
     const manifest = meta.qualities?.auto?.find((q) => q.url)?.url ?? null;
     const value: DmResolved | null = manifest
       ? {
