@@ -51,14 +51,16 @@ export async function fetchDocDetailed(
     return done(await fetchViaProxy(url, opts), "proxy");
   }
   const forceRelay = process.env.ONYX_RELAY_ONLY === "1";
+  let lastError: unknown = null;
   if (!forceRelay) {
     try {
       return done(await fetchRaw(url, opts), "direct");
     } catch (err) {
+      lastError = err;
       if (!isBlocked(err) || opts.method === "POST") throw err;
     }
   }
-  if (hasProxy() && !proxyDisabled()) {
+  if (hasProxy() && !proxyDisabled() && shouldProxy(url, lastError)) {
     try {
       return done(await fetchViaProxy(url, opts), "proxy");
     } catch {
@@ -71,6 +73,27 @@ export async function fetchDocDetailed(
 let proxyAgent: ProxyAgent | null = null;
 let proxyFails = 0;
 let proxyCooldownUntil = 0;
+
+
+/**
+ * Prefer direct egress unless the host is known to bot-wall datacenter IPs.
+ * A transient network error on a normally-direct host must not burn proxy
+ * bandwidth (or 20s of latency) — only 403/429/503 earns the proxy there.
+ */
+function shouldProxy(url: string, err: unknown): boolean {
+  const hosts = (process.env.ONYX_PROXY_HOSTS ?? "animexin.dev,yunshanid.site,donghuaworld.com")
+    .split(",")
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean);
+  let host = "";
+  try {
+    host = new URL(url).hostname.toLowerCase();
+  } catch {
+    return false;
+  }
+  if (hosts.some((h) => host === h || host.endsWith("." + h))) return true;
+  return err instanceof HttpError && [403, 429, 503].includes(err.status);
+}
 
 function hasProxy(): boolean {
   return Boolean(process.env.ONYX_PROXY_URL);
