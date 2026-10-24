@@ -34,25 +34,38 @@ export async function fetchJson<T = unknown>(url: string, opts: FetchOpts = {}):
  *   ONYX_PROXY_URL=http://user:pass@brd.superproxy.io:44445
  */
 export async function fetchDoc(url: string, opts: FetchOpts = {}): Promise<Response> {
+  return (await fetchDocDetailed(url, opts)).res;
+}
+
+export type FetchVia = "direct" | "proxy" | "relay";
+
+/** Same chain as fetchDoc but reports which route served the request (for /api/diag). */
+export async function fetchDocDetailed(
+  url: string,
+  opts: FetchOpts = {}
+): Promise<{ res: Response; via: FetchVia; ms: number }> {
+  const t0 = Date.now();
+  const done = (res: Response, via: FetchVia) => ({ res, via, ms: Date.now() - t0 });
+
   if (process.env.ONYX_FORCE_PROXY === "1" && hasProxy()) {
-    return fetchViaProxy(url, opts);
+    return done(await fetchViaProxy(url, opts), "proxy");
   }
   const forceRelay = process.env.ONYX_RELAY_ONLY === "1";
   if (!forceRelay) {
     try {
-      return await fetchRaw(url, opts);
+      return done(await fetchRaw(url, opts), "direct");
     } catch (err) {
       if (!isBlocked(err) || opts.method === "POST") throw err;
     }
   }
   if (hasProxy() && !proxyDisabled()) {
     try {
-      return await fetchViaProxy(url, opts);
+      return done(await fetchViaProxy(url, opts), "proxy");
     } catch {
       markProxyFailure();
     }
   }
-  return fetchViaRelay(url, opts);
+  return done(await fetchViaRelay(url, opts), "relay");
 }
 
 let proxyAgent: ProxyAgent | null = null;

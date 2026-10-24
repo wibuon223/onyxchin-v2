@@ -5,6 +5,7 @@ import { logger } from "hono/logger";
 import { sources, sourceList } from "./registry.js";
 import { proxyImage, proxyMedia, proxyHls, proxySubtitle } from "./lib/proxy.js";
 import { cached, cacheStats } from "./lib/cache.js";
+import { fetchDocDetailed } from "./lib/http.js";
 import type { SourceId } from "@onyxchin/shared";
 
 const app = new Hono();
@@ -20,6 +21,30 @@ app.get("/api/health", (c) =>
     ts: Date.now(),
   })
 );
+
+
+const DIAG_HOSTS = ["yunshanid.site", "donghuaworld.com", "animexin.dev", "anichin.my", "rajadonghua.com"];
+
+app.get("/api/diag", async (c) => {
+  const target = c.req.query("u");
+  if (!target) return c.json({ error: "missing u" }, 400);
+  let host = "";
+  try {
+    host = new URL(target).hostname.toLowerCase();
+  } catch {
+    return c.json({ error: "bad url" }, 400);
+  }
+  if (!DIAG_HOSTS.some((h) => host === h || host.endsWith("." + h))) {
+    return c.json({ error: "host not allowed", allow: DIAG_HOSTS }, 403);
+  }
+  try {
+    const { res, via, ms } = await fetchDocDetailed(target, { timeoutMs: 25000 });
+    const body = await res.text();
+    return c.json({ via, ms, status: res.status, bytes: body.length, sample: body.slice(0, 120) });
+  } catch (e) {
+    return c.json({ error: String(e) }, 502);
+  }
+});
 
 app.get("/api/sources", (c) =>
   c.json({
