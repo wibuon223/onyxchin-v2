@@ -37,9 +37,14 @@ app.get("/api/diag", async (c) => {
   if (!DIAG_HOSTS.some((h) => host === h || host.endsWith("." + h))) {
     return c.json({ error: "host not allowed", allow: DIAG_HOSTS }, 403);
   }
+  const force = c.req.query("via");
+  if (force === "relay") process.env.ONYX_RELAY_ONLY = "1";
+  if (force === "proxy") process.env.ONYX_FORCE_PROXY = "1";
   try {
     const { res, via, ms } = await fetchDocDetailed(target, { timeoutMs: 25000 });
     const body = await res.text();
+    delete process.env.ONYX_RELAY_ONLY;
+    delete process.env.ONYX_FORCE_PROXY;
     return c.json({ via, ms, status: res.status, bytes: body.length, sample: body.slice(0, 120) });
   } catch (e) {
     return c.json({ error: String(e) }, 502);
