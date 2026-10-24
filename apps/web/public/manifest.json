@@ -9,7 +9,10 @@
   "theme_color": "#07080A",
   "orientation": "any",
   "lang": "id",
-  "categories": ["entertainment", "video"],
+  "categories": [
+    "entertainment",
+    "video"
+  ],
   "icons": [
     {
       "src": "/icons/icon-192.png",
@@ -31,7 +34,13 @@
     }
   ],
   "shortcuts": [
-    { "name": "Jelajah", "url": "/browse" },
-    { "name": "Cari", "url": "/search" }
+    {
+      "name": "Jelajah",
+      "url": "/browse"
+    },
+    {
+      "name": "Cari",
+      "url": "/search"
+    }
   ]
 }
