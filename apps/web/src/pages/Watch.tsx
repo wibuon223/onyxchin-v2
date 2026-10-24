@@ -159,7 +159,6 @@ export function Watch() {
             referrerPolicy="origin"
             loading="lazy"
           />
-          <span className="stage__tag mono">Sematan pihak ketiga</span>
         </div>
       );
     }
@@ -352,12 +351,8 @@ export function Watch() {
 
         <p className="watch-page__credit mono mono--faint">
           Sumber: {sourceName}
-          {sourceInfo ? ` — ${hostOf(sourceInfo.baseUrl)}` : ""} ·{" "}
-          {selected?.kind === "external"
-            ? "tautan eksternal"
-            : selected?.kind === "iframe"
-              ? "sematan pihak ketiga"
-              : "diputar di peramban"}
+          {sourceInfo ? ` — ${hostOf(sourceInfo.baseUrl)}` : ""}
+          {selected?.kind === "external" ? " · tautan eksternal" : ""}
         </p>
       </div>
 
